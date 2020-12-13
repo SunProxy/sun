@@ -29,7 +29,7 @@ jobs:
       - run: go build -o sun_windows.exe
       - run: mkdir /tmp/artifacts
       - run: mv sun_linux /tmp/artifacts
-      - run: mv sun_windows /tmp/artifacts
+      - run: mv sun_windows.exe /tmp/artifacts
 
       - store_artifacts:
          path: /tmp/artifacts
