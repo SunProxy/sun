@@ -30,8 +30,7 @@ jobs:
           name: Build Binaries
           command: |
             go build -o sun_linux;
-            env GOOS=windows GOARCH=amd64;
-            go build -o sun_windows.exe;
+            env GOOS=windows GOARCH=amd64 go build -o sun_windows.exe;
       - run:
           name: make Artifact Folder
           command: |
