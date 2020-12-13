@@ -24,9 +24,12 @@ jobs:
       # specify any bash command here prefixed with `run: `
       - run: go get -v -t -d ./...
       - run: go test -v ./...
-      - run: go build
+      - run: go build -o sun_linux
+      - run: set GOOS=windows
+      - run: go build -o sun_windows
       - run: mkdir /temp/artifacts
-      - run: mv sun /temp/artifacts
+      - run: mv sun_linux /temp/artifacts
+      - run: mv sun_windows /temp/artifacts
 
       - store_artifacts:
          path: /tmp/artifacts
