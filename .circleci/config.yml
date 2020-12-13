@@ -22,15 +22,25 @@ jobs:
       - checkout
 
       # specify any bash command here prefixed with `run: `
-      - run: go get -v -t -d ./...
-      - run: go test -v ./...
-      - run: go build -o sun_linux
-      - run: set GOOS=windows
-      - run: go build -o sun_windows.exe
-      - run: mkdir /tmp/artifacts
-      - run: mv sun_linux /tmp/artifacts
-      - run: mv sun_windows.exe /tmp/artifacts
+      - run:
+        - name: Get Modules
+        - command: |
+          go get -v -t -d ./...
+      - run:
+        - name: Build Binaries
+        - command: |
+          go build -o sun_linux
+          set GOOS=windows
+          go build -o sun_windows.exe
+      - run:
+        - name: make Artifact Folder
+        - command: |
+          mkdir /tmp/artifacts
+      - run:
+          - name: Move Binaries
+          - command: |
+            mv sun_linux /tmp/artifacts;
+            mv sun_windows.exe /tmp/artifacts;
 
       - store_artifacts:
          path: /tmp/artifacts
-         name: Binaries
