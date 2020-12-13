@@ -27,7 +27,6 @@ jobs:
 
       - discord/notify:
           color: '4383476'
-          message: Started Build!
           webhook: $DISCORD_WEBHOOK
 
       - run:
@@ -48,6 +47,8 @@ jobs:
           command: |
             mv sun_linux /tmp/artifacts;
             mv sun_windows.exe /tmp/artifacts;
+      - discord/status:
+          webhook: $DISCORD_WEBHOOK
 
       - store_artifacts:
          path: /tmp/artifacts
