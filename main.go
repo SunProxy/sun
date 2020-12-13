@@ -1,1 +1,5 @@
-package sun
+package main
+
+func main() {
+
+}
