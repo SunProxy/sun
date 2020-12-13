@@ -27,9 +27,9 @@ jobs:
       - run: go build -o sun_linux
       - run: set GOOS=windows
       - run: go build -o sun_windows
-      - run: mkdir /temp/artifacts
-      - run: mv sun_linux /temp/artifacts
-      - run: mv sun_windows /temp/artifacts
+      - run: mkdir /tmp/artifacts
+      - run: mv sun_linux /tmp/artifacts
+      - run: mv sun_windows /tmp/artifacts
 
       - store_artifacts:
          path: /tmp/artifacts
