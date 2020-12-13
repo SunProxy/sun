@@ -25,17 +25,17 @@ jobs:
       - run:
         - name: Get Modules
         - command: |
-          go get -v -t -d ./...
+          go get -v -t -d ./...;
       - run:
         - name: Build Binaries
         - command: |
-          go build -o sun_linux
-          set GOOS=windows
-          go build -o sun_windows.exe
+          go build -o sun_linux;
+          set GOOS=windows;
+          go build -o sun_windows.exe;
       - run:
         - name: make Artifact Folder
         - command: |
-          mkdir /tmp/artifacts
+          mkdir /tmp/artifacts;
       - run:
           - name: Move Binaries
           - command: |
