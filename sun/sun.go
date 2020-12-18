@@ -21,7 +21,7 @@ func (s *Sun) main() {
 		conn, err := s.Listener.Accept()
 		if err != nil {
 			fmt.Println(err)
-			_ = s.Listener.Disconnect(conn.(*minecraft.Conn), text.Colourf("<red>You Have been Disconnected!<red>"))
+			_ = s.Listener.Disconnect(conn.(*minecraft.Conn), text.Colourf("<red>You Have been Disconnected!</red>"))
 			continue
 		}
 		pl := &Player{conn: conn.(*minecraft.Conn), Sun: s}
@@ -30,7 +30,7 @@ func (s *Sun) main() {
 			IdentityData: pl.conn.IdentityData()}.Dial("raknet", s.Hub.ToString())
 		if err != nil {
 			fmt.Println(err)
-			_ = s.Listener.Disconnect(conn.(*minecraft.Conn), text.Colourf("<red>You Have been Disconnected!<red>"))
+			_ = s.Listener.Disconnect(conn.(*minecraft.Conn), text.Colourf("<red>You Have been Disconnected!</red>"))
 			continue
 		}
 		pl.remote = &Remote{rconn, s.Hub}
@@ -77,7 +77,8 @@ func (s *Sun) AddPlayer(player *Player) {
 Closes a players session cleanly with a nice disconnection message!
 */
 func (s *Sun) ClosePlayer(player *Player) {
-	_ = s.Listener.Disconnect(player.conn, text.Colourf("<red>You Have been Disconnected!<red>"))
+	_ = s.Listener.Disconnect(player.conn, text.Colourf("<red>You Have been Disconnected!</"+
+		"-*.-+****red>"))
 	_ = player.remote.conn.Close()
 	delete(s.Players, player.conn.IdentityData().Identity)
 }
