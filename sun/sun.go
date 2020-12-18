@@ -53,6 +53,39 @@ type Sun struct {
 	open     bool
 }
 
+type StatusProvider struct {
+	status *minecraft.ServerStatus
+}
+
+func (s StatusProvider) ServerStatus(playerCount int, maxPlayers int) minecraft.ServerStatus {
+	s.status.PlayerCount = playerCount
+	return *s.status
+}
+
+/**
+Returns a new sun with config the specified config hence W
+*/
+func NewSunW(config Config) (*Sun, error) {
+	listener, err := minecraft.ListenConfig{
+		StatusProvider: StatusProvider{&config.Status},
+	}.Listen("raknet", fmt.Sprint(":", config.Port))
+	if err != nil {
+		return nil, err
+	}
+	return &Sun{Listener: listener, Players: make(map[string]*Player, config.Status.MaxPlayers), Hub: config.Hub}, nil
+}
+
+/**
+Returns a new sun with a auto detected config
+*/
+func NewSun() (*Sun, error) {
+	cfg, err := LoadConfig()
+	if err != nil {
+		return nil, err
+	}
+	return NewSunW(cfg)
+}
+
 func (s *Sun) main() {
 	defer s.Listener.Close()
 	for s.open {
