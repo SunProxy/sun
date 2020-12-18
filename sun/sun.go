@@ -89,5 +89,14 @@ func (s *Sun) handlePlayer(player *Player) {
 Changes a players remote and readies the connection
 */
 func (s *Sun) TransferPlayer(player *Player, addr IpAddr) {
-
+	conn, err := minecraft.Dialer{
+		ClientData:   player.conn.ClientData(),
+		IdentityData: player.conn.IdentityData()}.Dial("raknet", addr.ToString())
+	if err != nil {
+		s.ClosePlayer(player)
+	}
+	player.remote = &Remote{conn, player}
+	if err := player.remote.conn.StartGame(player.remote.conn.GameData()); err != nil {
+		panic(err)
+	}
 }
