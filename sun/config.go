@@ -61,54 +61,74 @@ type Config struct {
 }
 
 func LoadConfig() (Config, error) {
-	var config Config
 	if _, err := os.Stat("config.toml"); !os.IsNotExist(err) {
-		data, _ := ioutil.ReadFile("config.toml")
-		_ = toml.Unmarshal(data, &config)
-		config = defaultConfig(config)
-		data, _ = toml.Marshal(config)
-		_ = ioutil.WriteFile("config.toml", data, 0644)
-		return config, nil
+		return LoadTomlConfig()
 	}
 	if _, err := os.Stat("config.json"); !os.IsNotExist(err) {
-		data, _ := ioutil.ReadFile("config.json")
-		_ = json.Unmarshal(data, &config)
-		config = defaultConfig(config)
-		data, _ = json.Marshal(config)
-		_ = ioutil.WriteFile("config.json", data, 0644)
-		return config, nil
+		return LoadJsonConfig()
 	}
 	if _, err := os.Stat("config.yml"); !os.IsNotExist(err) {
-		data, _ := ioutil.ReadFile("config.yml")
-		_ = yaml.Unmarshal(data, &config)
-		config = defaultConfig(config)
-		data, _ = yaml.Marshal(config)
-		_ = ioutil.WriteFile("config.yml", data, 0644)
-		return config, nil
+		return LoadYamlConfig()
 	}
 	if _, err := os.Stat("config.xml"); !os.IsNotExist(err) {
-		data, _ := ioutil.ReadFile("config.xml")
-		_ = xml.Unmarshal(data, &config)
-		config = defaultConfig(config)
-		data, _ = xml.Marshal(config)
-		_ = ioutil.WriteFile("config.xml", data, 0644)
-		return config, nil
+		return LoadXmlConfig()
 	}
 	if _, err := os.Stat("config.gob"); !os.IsNotExist(err) {
-		data, _ := ioutil.ReadFile("config.gob")
-		dec := gob.NewDecoder(bytes.NewReader(data))
-		_ = dec.Decode(&config)
-		config = defaultConfig(config)
-		datab := bytes.Buffer{}
-		enc := gob.NewEncoder(&datab)
-		_ = enc.Encode(config)
-		_ = ioutil.WriteFile("config.gob", datab.Bytes(), 0644)
-		return config, nil
+		return LoadGobConfig()
 	}
-	//No config found so we now will print that and generate the default yaml one!
+	return LoadYamlConfig()
+}
+
+func LoadTomlConfig() (Config, error) {
+	config := Config{}
+	data, _ := ioutil.ReadFile("config.toml")
+	_ = toml.Unmarshal(data, &config)
 	config = defaultConfig(config)
-	data, _ := yaml.Marshal(config)
+	data, _ = toml.Marshal(config)
+	_ = ioutil.WriteFile("config.toml", data, 0644)
+	return config, nil
+}
+
+func LoadJsonConfig() (Config, error) {
+	config := Config{}
+	data, _ := ioutil.ReadFile("config.json")
+	_ = json.Unmarshal(data, &config)
+	config = defaultConfig(config)
+	data, _ = json.Marshal(config)
+	_ = ioutil.WriteFile("config.json", data, 0644)
+	return config, nil
+}
+
+func LoadYamlConfig() (Config, error) {
+	config := Config{}
+	data, _ := ioutil.ReadFile("config.yml")
+	_ = yaml.Unmarshal(data, &config)
+	config = defaultConfig(config)
+	data, _ = yaml.Marshal(config)
 	_ = ioutil.WriteFile("config.yml", data, 0644)
+	return config, nil
+}
+
+func LoadXmlConfig() (Config, error) {
+	config := Config{}
+	data, _ := ioutil.ReadFile("config.xml")
+	_ = xml.Unmarshal(data, &config)
+	config = defaultConfig(config)
+	data, _ = xml.Marshal(config)
+	_ = ioutil.WriteFile("config.xml", data, 0644)
+	return config, nil
+}
+
+func LoadGobConfig() (Config, error) {
+	config := Config{}
+	data, _ := ioutil.ReadFile("config.gob")
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	_ = dec.Decode(&config)
+	config = defaultConfig(config)
+	datab := bytes.Buffer{}
+	enc := gob.NewEncoder(&datab)
+	_ = enc.Encode(config)
+	_ = ioutil.WriteFile("config.gob", datab.Bytes(), 0644)
 	return config, nil
 }
 
