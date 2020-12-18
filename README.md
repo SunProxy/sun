@@ -16,7 +16,7 @@ Drops item | -> | Forwards request to the server | -> | Processes request
 Spawns Item on the ground | <- | Forwards request to the Client | <- | Sends back a inventory transaction and AddActor packet
 
 This is called man in the middle proxying. <br>
-It allows for hack clients and custom packets / behavior to work no matter what server you are on. <br>
+It allows for hacking proxies and custom packets / behavior to work no matter what server you are on. <br>
 SunProxy makes use of this for our Custom Transfer and Messaging system!
 
 

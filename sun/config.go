@@ -37,9 +37,14 @@ SOFTWARE.
 package sun
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
+	"encoding/xml"
 	"github.com/pelletier/go-toml"
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/text"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 )
@@ -53,24 +58,63 @@ type Config struct {
 	Hub IpAddr
 
 	Port uint16
-
 }
 
 func LoadConfig() (Config, error) {
+	var config Config
 	if _, err := os.Stat("config.toml"); !os.IsNotExist(err) {
 		data, _ := ioutil.ReadFile("config.toml")
-		var config Config
-		err = toml.Unmarshal(data, &config)
-		if err != nil {
-			return Config{}, err
-		}
+		_ = toml.Unmarshal(data, &config)
+		config = defaultConfig(config)
+		data, _ = toml.Marshal(config)
+		_ = ioutil.WriteFile("config.toml", data, 0644)
+		return config, nil
 	}
-	return Config{}, nil
+	if _, err := os.Stat("config.json"); !os.IsNotExist(err) {
+		data, _ := ioutil.ReadFile("config.json")
+		_ = json.Unmarshal(data, &config)
+		config = defaultConfig(config)
+		data, _ = json.Marshal(config)
+		_ = ioutil.WriteFile("config.json", data, 0644)
+		return config, nil
+	}
+	if _, err := os.Stat("config.yml"); !os.IsNotExist(err) {
+		data, _ := ioutil.ReadFile("config.yml")
+		_ = yaml.Unmarshal(data, &config)
+		config = defaultConfig(config)
+		data, _ = yaml.Marshal(config)
+		_ = ioutil.WriteFile("config.yml", data, 0644)
+		return config, nil
+	}
+	if _, err := os.Stat("config.xml"); !os.IsNotExist(err) {
+		data, _ := ioutil.ReadFile("config.xml")
+		_ = xml.Unmarshal(data, &config)
+		config = defaultConfig(config)
+		data, _ = xml.Marshal(config)
+		_ = ioutil.WriteFile("config.xml", data, 0644)
+		return config, nil
+	}
+	if _, err := os.Stat("config.gob"); !os.IsNotExist(err) {
+		data, _ := ioutil.ReadFile("config.gob")
+		dec := gob.NewDecoder(bytes.NewReader(data))
+		_ = dec.Decode(&config)
+		config = defaultConfig(config)
+		datab := bytes.Buffer{}
+		enc := gob.NewEncoder(&datab)
+		_ = enc.Encode(config)
+		_ = ioutil.WriteFile("config.gob", datab.Bytes(), 0644)
+		return config, nil
+	}
+	//No config found so we now will print that and generate the default yaml one!
+	config = defaultConfig(config)
+	data, _ := yaml.Marshal(config)
+	_ = ioutil.WriteFile("config.yml", data, 0644)
+	return config, nil
 }
 
 /**
 Should take in a empty config
- */
+*/
 func defaultConfig(config Config) Config {
 	if config.Port == 0 {
 		config.Port = 19132
@@ -84,7 +128,7 @@ func defaultConfig(config Config) Config {
 	if config.Status == emptyStatus {
 		config.Status.MaxPlayers = 50
 		config.Status.PlayerCount = 0
-		config.Status.ServerName = text.Colourf("<>")
+		config.Status.ServerName = text.Colourf("<yellow>Sun Proxy</yellow>")
 	}
 	return config
 }

@@ -93,4 +93,4 @@ fabric.properties
 .idea/
 
 # ignore config files of mine
-config.*
+config.hex

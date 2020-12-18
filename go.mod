@@ -39,4 +39,6 @@ go 1.14
 require (
 	github.com/pelletier/go-toml v1.8.1
 	github.com/sandertv/gophertunnel v1.10.1
+	gopkg.in/ini.v1 v1.62.0 // indirect
+	gopkg.in/yaml.v2 v2.2.2
 )
