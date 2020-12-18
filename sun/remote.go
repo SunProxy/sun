@@ -5,6 +5,6 @@ import (
 )
 
 type Remote struct {
-	conn   *minecraft.Conn
-	Player *Player
+	conn *minecraft.Conn
+	addr IpAddr
 }
