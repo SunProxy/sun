@@ -40,7 +40,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sandertv/gophertunnel/minecraft"
-	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	"log"
 	"sync"
@@ -57,7 +56,7 @@ type StatusProvider struct {
 	status *minecraft.ServerStatus
 }
 
-func (s StatusProvider) ServerStatus(playerCount int, maxPlayers int) minecraft.ServerStatus {
+func (s StatusProvider) ServerStatus(playerCount int, _ int) minecraft.ServerStatus {
 	s.status.PlayerCount = playerCount
 	return *s.status
 }
@@ -187,7 +186,7 @@ func (s *Sun) handlePlayer(player *Player) {
 			}
 			err = player.remote.conn.WritePacket(pk)
 			if disconnect, ok := errors.Unwrap(err).(minecraft.DisconnectError); ok {
-				_ = s.Listener.Disconnect(player.conn, disconnect.Error())
+				_ = s.Listener.Disconnect(player.conn, text.Colourf("<red>"+disconnect.Error()+"</red>"))
 				return
 			}
 		}
@@ -199,13 +198,9 @@ func (s *Sun) handlePlayer(player *Player) {
 				s.ClosePlayer(player)
 				return
 			}
-			if tpk, ok := pk.(*packet.Transfer); ok {
-				s.TransferPlayer(player, IpAddr{Ip: tpk.Address, Port: tpk.Port})
-				continue
-			}
 			err = player.conn.WritePacket(pk)
 			if disconnect, ok := errors.Unwrap(err).(minecraft.DisconnectError); ok {
-				_ = s.Listener.Disconnect(player.conn, disconnect.Error())
+				_ = s.Listener.Disconnect(player.conn, text.Colourf("<red>"+disconnect.Error()+"</red>"))
 				return
 			}
 		}
