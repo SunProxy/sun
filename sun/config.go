@@ -53,6 +53,7 @@ type Config struct {
 	Hub IpAddr
 
 	Port uint16
+
 }
 
 func LoadConfig() (Config, error) {
@@ -69,7 +70,7 @@ func LoadConfig() (Config, error) {
 
 /**
 Should take in a empty config
-*/
+ */
 func defaultConfig(config Config) Config {
 	if config.Port == 0 {
 		config.Port = 19132
