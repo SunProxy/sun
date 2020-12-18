@@ -1,5 +1,5 @@
-module "github.com/jviguy/sun"
+module github.com/jviguy/sun
 
-require (
-	github.com/sandertv/gophertunnel v1.10.1
-)
+go 1.14
+
+require github.com/sandertv/gophertunnel v1.10.1

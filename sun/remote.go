@@ -4,8 +4,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 )
 
-type Player struct {
+type Remote struct {
 	conn   *minecraft.Conn
-	remote *Remote
-	Sun    *Sun
+	Player *Player
 }
