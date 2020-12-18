@@ -1,4 +1,4 @@
-# <p align="center"><img src="https://github.com/TacoNoBurrito/sun/blob/master/imgassets/SunProxy.png"/><br>A MCPE Proxy Client</p>
+# <p align="center"><img src="https://github.com/TacoNoBurrito/sun/blob/master/SunProxy.png"/><br>A MCPE Proxy Client</p>
 
 
 
