@@ -1,8 +1,23 @@
-# <p align="center"><img src="https://github.com/TacoNoBurrito/sun/blob/master/SunProxy.png"/><br>A MCPE Proxy Client</p>
+# <p align="center"><img src="https://github.com/SunProxy/sun/blob/master/SunProxy.png"/><br>A MCPE Proxy Client</p>
 
+## Explanation
+A normal connection is made out to be like this. <br >
 
+Client | Direction | Server
+------------ | ------------- | -------------
+Drops item |  -> | Processes request
+Spawns Item on the ground | <- | Sends back a inventory transaction and AddActor packet
 
+That is known as Peer To Peer. Now we get into the more juicy graphs.
 
+Client | Direction | Proxy | Direction | Server
+------------ | ------------- | ------------- | ------------- | -------------
+Drops item | -> | Forwards request to the server | -> | Processes request
+Spawns Item on the ground | <- | Forwards request to the Client | <- | Sends back a inventory transaction and AddActor packet
+
+This is called man in the middle proxying. <br>
+It allows for hack clients and custom packets / behavior to work no matter what server you are on. <br>
+SunProxy makes use of this for our Custom Transfer and Messaging system!
 
 
 # License

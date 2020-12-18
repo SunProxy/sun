@@ -36,8 +36,54 @@ SOFTWARE.
 
 package sun
 
+import (
+	"github.com/pelletier/go-toml"
+	"github.com/sandertv/gophertunnel/minecraft"
+	"github.com/sandertv/gophertunnel/minecraft/text"
+	"io/ioutil"
+	"os"
+)
+
 /**
 The basic Config file struct.
 */
 type Config struct {
+	Status minecraft.ServerStatus
+
+	Hub IpAddr
+
+	Port uint16
+}
+
+func LoadConfig() (Config, error) {
+	if _, err := os.Stat("config.toml"); !os.IsNotExist(err) {
+		data, _ := ioutil.ReadFile("config.toml")
+		var config Config
+		err = toml.Unmarshal(data, &config)
+		if err != nil {
+			return Config{}, err
+		}
+	}
+	return Config{}, nil
+}
+
+/**
+Should take in a empty config
+*/
+func defaultConfig(config Config) Config {
+	if config.Port == 0 {
+		config.Port = 19132
+	}
+	emptyIp := IpAddr{}
+	if config.Hub == emptyIp {
+		config.Hub.Port = 19133
+		config.Hub.Ip = "0.0.0.0"
+	}
+	emptyStatus := minecraft.ServerStatus{}
+	if config.Status == emptyStatus {
+		config.Status.MaxPlayers = 50
+		config.Status.PlayerCount = 0
+		config.Status.ServerName = text.Colourf("<>")
+	}
+	return config
 }
