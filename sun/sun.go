@@ -40,13 +40,37 @@ func (s *Sun) main() {
 	}
 }
 
-func (s *Sun) Start() {
+/**
+Starts the server synchronously depending on the bool
+*/
+func (s *Sun) start(async bool) {
 	if !s.open {
 		s.open = true
+	}
+	if !async {
+		s.main()
+		return
 	}
 	go s.main()
 }
 
+/**
+Starts the server synchronously
+*/
+func (s *Sun) Start() {
+	s.start(false)
+}
+
+/**
+Starts the server asynchronously
+*/
+func (s *Sun) StartAsync() {
+	s.start(true)
+}
+
+/**
+closes the Sun will cause the main() to break
+*/
 func (s *Sun) Close() {
 	s.open = false
 }
@@ -123,20 +147,27 @@ func (s *Sun) handlePlayer(player *Player) {
 Changes a players remote and readies the connection
 */
 func (s *Sun) TransferPlayer(player *Player, addr IpAddr) {
-	s.flushPlayer(player)
+	//Dial the new server based on the ipaddr
 	conn, err := minecraft.Dialer{
 		ClientData:   player.conn.ClientData(),
 		IdentityData: player.conn.IdentityData()}.Dial("raknet", addr.ToString())
 	if err != nil {
-		_ = s.Listener.Disconnect(player.conn, text.Colourf("<red>You Have been Disconnected!</red>"))
+		//cleanly close player
+		s.ClosePlayer(player)
 		return
 	}
+	//Start server
 	if err := conn.DoSpawn(); err != nil {
 		panic(err)
 	}
+	//send out Buffered packets now so they don't get sent to the wrong connection
+	s.flushPlayer(player)
 	player.remote = &Remote{conn, addr}
 }
 
+/**
+Flushes both connections a player might have for transfer
+*/
 func (s *Sun) flushPlayer(player *Player) {
 	err := player.conn.Flush()
 	if err != nil {
