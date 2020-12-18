@@ -36,11 +36,8 @@ SOFTWARE.
 
 package sun
 
-import (
-	"github.com/sandertv/gophertunnel/minecraft"
-)
-
-type Remote struct {
-	conn *minecraft.Conn
-	addr IpAddr
+/**
+The basic Config file struct.
+*/
+type Config struct {
 }
