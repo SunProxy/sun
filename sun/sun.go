@@ -1,9 +1,12 @@
 package sun
 
 import (
+	"errors"
 	"fmt"
 	"github.com/sandertv/gophertunnel/minecraft"
+	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
+	"log"
 	"sync"
 )
 
@@ -21,7 +24,6 @@ func (s *Sun) main() {
 		conn, err := s.Listener.Accept()
 		if err != nil {
 			fmt.Println(err)
-			_ = s.Listener.Disconnect(conn.(*minecraft.Conn), text.Colourf("<red>You Have been Disconnected!</red>"))
 			continue
 		}
 		pl := &Player{conn: conn.(*minecraft.Conn), Sun: s}
@@ -58,27 +60,26 @@ func (s *Sun) AddPlayer(player *Player) {
 	var g sync.WaitGroup
 	g.Add(2)
 	go func() {
-		if err := player.remote.conn.StartGame(player.remote.conn.GameData()); err != nil {
+		if err := player.conn.StartGame(player.remote.conn.GameData()); err != nil {
 			panic(err)
 		}
 		g.Done()
 	}()
 	go func() {
-		if err := player.conn.DoSpawn(); err != nil {
+		if err := player.remote.conn.DoSpawn(); err != nil {
 			panic(err)
 		}
 		g.Done()
 	}()
 	g.Wait()
-	go s.handlePlayer(player)
+	s.handlePlayer(player)
 }
 
 /**
 Closes a players session cleanly with a nice disconnection message!
 */
 func (s *Sun) ClosePlayer(player *Player) {
-	_ = s.Listener.Disconnect(player.conn, text.Colourf("<red>You Have been Disconnected!</"+
-		"-*.-+****red>"))
+	_ = s.Listener.Disconnect(player.conn, text.Colourf("<red>You Have been Disconnected!</red>"))
 	_ = player.remote.conn.Close()
 	delete(s.Players, player.conn.IdentityData().Identity)
 }
@@ -86,14 +87,34 @@ func (s *Sun) ClosePlayer(player *Player) {
 func (s *Sun) handlePlayer(player *Player) {
 	go func() {
 		for {
-			pk, _ := player.conn.ReadPacket()
-			_ = player.remote.conn.WritePacket(pk)
+			pk, err := player.conn.ReadPacket()
+			if err != nil {
+				s.ClosePlayer(player)
+				return
+			}
+			err = player.remote.conn.WritePacket(pk)
+			if disconnect, ok := errors.Unwrap(err).(minecraft.DisconnectError); ok {
+				_ = s.Listener.Disconnect(player.conn, disconnect.Error())
+				return
+			}
 		}
 	}()
 	go func() {
 		for {
-			pk, _ := player.remote.conn.ReadPacket()
-			_ = player.conn.WritePacket(pk)
+			pk, err := player.remote.conn.ReadPacket()
+			if err != nil {
+				s.ClosePlayer(player)
+				return
+			}
+			if tpk, ok := pk.(*packet.Transfer); ok {
+				s.TransferPlayer(player, IpAddr{Ip: tpk.Address, Port: tpk.Port})
+				continue
+			}
+			err = player.conn.WritePacket(pk)
+			if disconnect, ok := errors.Unwrap(err).(minecraft.DisconnectError); ok {
+				_ = s.Listener.Disconnect(player.conn, disconnect.Error())
+				return
+			}
 		}
 	}()
 }
@@ -102,14 +123,27 @@ func (s *Sun) handlePlayer(player *Player) {
 Changes a players remote and readies the connection
 */
 func (s *Sun) TransferPlayer(player *Player, addr IpAddr) {
+	s.flushPlayer(player)
 	conn, err := minecraft.Dialer{
 		ClientData:   player.conn.ClientData(),
 		IdentityData: player.conn.IdentityData()}.Dial("raknet", addr.ToString())
 	if err != nil {
-		s.ClosePlayer(player)
+		_ = s.Listener.Disconnect(player.conn, text.Colourf("<red>You Have been Disconnected!</red>"))
+		return
+	}
+	if err := conn.DoSpawn(); err != nil {
+		panic(err)
 	}
 	player.remote = &Remote{conn, addr}
-	if err := player.remote.conn.StartGame(player.remote.conn.GameData()); err != nil {
-		panic(err)
+}
+
+func (s *Sun) flushPlayer(player *Player) {
+	err := player.conn.Flush()
+	if err != nil {
+		log.Println(err)
+	}
+	err = player.remote.conn.Flush()
+	if err != nil {
+		log.Println(err)
 	}
 }
