@@ -66,10 +66,11 @@ func (pk *Text) Marshal(w *protocol.Writer) {
 }
 
 func (pk *Text) Unmarshal(r *protocol.Reader) {
+	//if count == 0 we send it to all the connect clients.
 	var count uint32
 	r.Varuint32(&count)
 	pk.Servers = make([]string, count)
 	for i := uint32(0); i < count; i++ {
-		r.String(&pk.Servers[i])
+			r.String(&pk.Servers[i])
 	}
 }

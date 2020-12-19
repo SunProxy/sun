@@ -1,5 +1,9 @@
 # <p align="center"><img src="https://github.com/SunProxy/sun/blob/master/SunProxy.png"/></p>
 
+# Downloads
+<a align="center">[Pipelines](https://app.circleci.com/pipelines/github/SunProxy/sun) </a><br>
+Here you can find all the build please select the latest and click Artifacts.
+
 ## Explanation
 A normal connection is made out to be like this. <br >
 

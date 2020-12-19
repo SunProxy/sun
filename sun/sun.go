@@ -107,7 +107,8 @@ func (s *Sun) main() {
 			IdentityData: pl.conn.IdentityData()}.Dial("raknet", s.Hub.ToString())
 		if err != nil {
 			log.Println(err)
-			_ = s.Listener.Disconnect(conn.(*minecraft.Conn), text.Colourf("<red>You Have been Disconnected!</red>"))
+			_ = s.Listener.Disconnect(conn.(*minecraft.Conn),
+				text.Colourf("<red>You Have been Disconnected!</red>"))
 			continue
 		}
 		pl.remote = &Remote{rconn, s.Hub}
@@ -212,13 +213,15 @@ func (s *Sun) handlePlayer(player *Player) {
 				continue
 			}
 			if pk, ok := pk.(*Text); ok {
-				for _, server := range pk.Servers {
-					for _, pl := range s.Players {
-						if pl.Remote().Addr().ToString() == server {
-							_ = pl.conn.WritePacket(&packet.Text{Message: pk.Message, TextType: packet.TextTypeRaw})
-						}
-					}
+				//Only iterate if we have to.
+				if len(pk.Servers) > 0 {
+					//in a new routine because of the iteration
+					go s.SendMessageToServers(pk.Message, pk.Servers)
+					continue
 				}
+				//if len(pk.Servers) == 0
+				s.SendMessage(pk.Message)
+				continue
 			}
 			err = player.conn.WritePacket(pk)
 			if err != nil {
@@ -226,6 +229,16 @@ func (s *Sun) handlePlayer(player *Player) {
 			}
 		}
 	}()
+}
+
+func (s *Sun) SendMessageToServers(Message string, Servers []string)  {
+	for _, server := range Servers {
+		for _, pl := range s.Players {
+			if pl.Remote().Addr().ToString() == server {
+				_ = pl.conn.WritePacket(&packet.Text{Message: Message, TextType: packet.TextTypeRaw})
+			}
+		}
+	}
 }
 
 /*
@@ -259,6 +272,8 @@ func (s *Sun) TransferPlayer(player *Player, addr IpAddr) {
 	if err := player.remote.conn.DoSpawn(); err != nil {
 		panic(err)
 	}
+	//force dimension change
+	_ = player.conn.WritePacket(&packet.ChangeDimension{Dimension: packet.DimensionEnd, Position: conn.GameData().PlayerPosition})
 	s.handlePlayer(player)
 }
 

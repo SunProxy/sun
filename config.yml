@@ -4,6 +4,6 @@ status:
   maxplayers: 50
   showversion: false
 hub:
-  ip: 0.0.0.0
+  address: ""
   port: 19133
 port: 19132
