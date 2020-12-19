@@ -101,7 +101,7 @@ func (s *Sun) main() {
 			log.Println(err)
 			continue
 		}
-		pl := &Player{conn: conn.(*minecraft.Conn), Sun: s}
+		pl := &Player{conn: conn.(*minecraft.Conn)}
 		rconn, err := minecraft.Dialer{
 			ClientData:   pl.conn.ClientData(),
 			IdentityData: pl.conn.IdentityData()}.Dial("raknet", s.Hub.ToString())
@@ -171,6 +171,9 @@ func (s *Sun) AddPlayer(player *Player) {
 		g.Done()
 	}()
 	g.Wait()
+	//start translator
+	player.InitTranslations()
+	//Start the two listener functions
 	s.handlePlayer(player)
 }
 
@@ -190,6 +193,7 @@ func (s *Sun) handlePlayer(player *Player) {
 			if err != nil {
 				return
 			}
+			TranslateClientEntityRuntimeIds(player, pk)
 			err = player.remote.conn.WritePacket(pk)
 			if err != nil {
 				return
@@ -202,6 +206,7 @@ func (s *Sun) handlePlayer(player *Player) {
 			if err != nil {
 				return
 			}
+			TranslateServerEntityRuntimeIds(player, pk)
 			if pk, ok := pk.(*Transfer); ok {
 				s.TransferPlayer(player, IpAddr{Address: pk.Address, Port: pk.Port})
 				continue
@@ -228,7 +233,7 @@ func (s *Sun) SendMessage(Message string) {
 	}
 }
 
-/**
+/*
 Changes a players remote and readies the connection
 */
 func (s *Sun) TransferPlayer(player *Player, addr IpAddr) {
@@ -252,7 +257,7 @@ func (s *Sun) TransferPlayer(player *Player, addr IpAddr) {
 	s.handlePlayer(player)
 }
 
-/**
+/*
 Flushes both connections a player might have for transfer
 */
 func (s *Sun) flushPlayer(player *Player) {

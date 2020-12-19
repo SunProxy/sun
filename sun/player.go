@@ -41,7 +41,56 @@ import (
 )
 
 type Player struct {
-	conn   *minecraft.Conn
-	remote *Remote
-	Sun    *Sun
+	conn         *minecraft.Conn
+	remote       *Remote
+	Translations *TranslatorMappings
+}
+
+type TranslatorMappings struct {
+	OriginalEntityRuntimeID uint64
+	OriginalEntityUniqueID  int64
+	CurrentEntityRuntimeID  uint64
+	CurrentEntityUniqueID   int64
+}
+
+/*
+Translates the entityUniqueID from a given packet to fix mix matched IDs
+*/
+func (p *Player) TranslateEntityUniqueID(entityUniqueID int64) int64 {
+	if entityUniqueID == p.Translations.OriginalEntityUniqueID {
+		return p.Translations.CurrentEntityUniqueID
+	} else if entityUniqueID == p.Translations.CurrentEntityUniqueID {
+		return p.Translations.OriginalEntityUniqueID
+	}
+	return entityUniqueID
+}
+
+/*
+Translates the entityRuntimeID from a given packet to fix mix matched IDs
+*/
+func (p *Player) TranslateEntityRuntimeID(entityRuntimeID uint64) uint64 {
+	if entityRuntimeID == p.Translations.OriginalEntityRuntimeID {
+		return p.Translations.CurrentEntityRuntimeID
+	} else if entityRuntimeID == p.Translations.CurrentEntityRuntimeID {
+		return p.Translations.OriginalEntityRuntimeID
+	}
+	return entityRuntimeID
+}
+
+/*
+Updates the TranslatorMappings for the said Player
+*/
+func (p *Player) UpdateTranslations() {
+	p.Translations.CurrentEntityRuntimeID = p.conn.GameData().EntityRuntimeID
+	p.Translations.CurrentEntityUniqueID = p.conn.GameData().EntityUniqueID
+}
+
+/*
+Should only be called when the player is first joined / added
+*/
+func (p *Player) InitTranslations() {
+	p.Translations = &TranslatorMappings{OriginalEntityUniqueID: p.conn.GameData().EntityUniqueID,
+		OriginalEntityRuntimeID: p.conn.GameData().EntityRuntimeID}
+	//safe as p.Translations is no longer nil and should still have the same data which is correct
+	p.UpdateTranslations()
 }
