@@ -42,17 +42,34 @@ import "github.com/sandertv/gophertunnel/minecraft/protocol"
 Text is sent by the server to send a message to all the connected players on the proxy.
 */
 type Text struct {
+	/*
+	Servers is an array of strings that contains the servers IP addresses the text message should be broadcast to
+	*/
+	Servers []string
+
+	/*
+	The text message
+	*/
 	Message string
 }
 
-func (pk Text) ID() uint32 {
+func (pk *Text) ID() uint32 {
 	return IDSunText
 }
 
-func (pk Text) Marshal(w *protocol.Writer) {
-	w.String(&pk.Message)
+func (pk *Text) Marshal(w *protocol.Writer) {
+	l := uint32(len(pk.Servers))
+	w.Varuint32(&l)
+	for _, v := range pk.Servers {
+		w.String(&v)
+	}
 }
 
-func (pk Text) Unmarshal(r *protocol.Reader) {
-	r.String(&pk.Message)
+func (pk *Text) Unmarshal(r *protocol.Reader) {
+	var count uint32
+	r.Varuint32(&count)
+	pk.Servers = make([]string, count)
+	for i := uint32(0); i < count; i++ {
+		r.String(&pk.Servers[i])
+	}
 }

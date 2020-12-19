@@ -44,3 +44,7 @@ type Remote struct {
 	conn *minecraft.Conn
 	addr IpAddr
 }
+
+func (r Remote) Addr() *IpAddr {
+	return &r.addr
+}
