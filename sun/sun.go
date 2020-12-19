@@ -37,9 +37,9 @@ SOFTWARE.
 package sun
 
 import (
-	"errors"
 	"fmt"
 	"github.com/sandertv/gophertunnel/minecraft"
+	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	"log"
 	"sync"
@@ -66,12 +66,19 @@ Returns a new sun with config the specified config hence W
 */
 func NewSunW(config Config) (*Sun, error) {
 	listener, err := minecraft.ListenConfig{
-		StatusProvider: StatusProvider{&config.Status},
+		AuthenticationDisabled: true,
+		StatusProvider:         StatusProvider{&config.Status},
 	}.Listen("raknet", fmt.Sprint(":", config.Port))
 	if err != nil {
 		return nil, err
 	}
+	registerPackets()
 	return &Sun{Listener: listener, Players: make(map[string]*Player, config.Status.MaxPlayers), Hub: config.Hub}, nil
+}
+
+func registerPackets() {
+	packet.Register(IDSunTransfer, func() packet.Packet { return &Transfer{} })
+	packet.Register(IDSunText, func() packet.Packet { return &Text{} })
 }
 
 /**
@@ -91,7 +98,7 @@ func (s *Sun) main() {
 		//Listener won't be closed unless it is manually done
 		conn, err := s.Listener.Accept()
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			continue
 		}
 		pl := &Player{conn: conn.(*minecraft.Conn), Sun: s}
@@ -99,7 +106,7 @@ func (s *Sun) main() {
 			ClientData:   pl.conn.ClientData(),
 			IdentityData: pl.conn.IdentityData()}.Dial("raknet", s.Hub.ToString())
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			_ = s.Listener.Disconnect(conn.(*minecraft.Conn), text.Colourf("<red>You Have been Disconnected!</red>"))
 			continue
 		}
@@ -167,7 +174,7 @@ func (s *Sun) AddPlayer(player *Player) {
 	s.handlePlayer(player)
 }
 
-/**
+/*
 Closes a players session cleanly with a nice disconnection message!
 */
 func (s *Sun) ClosePlayer(player *Player) {
@@ -181,12 +188,10 @@ func (s *Sun) handlePlayer(player *Player) {
 		for {
 			pk, err := player.conn.ReadPacket()
 			if err != nil {
-				s.ClosePlayer(player)
 				return
 			}
 			err = player.remote.conn.WritePacket(pk)
-			if disconnect, ok := errors.Unwrap(err).(minecraft.DisconnectError); ok {
-				_ = s.Listener.Disconnect(player.conn, text.Colourf("<red>"+disconnect.Error()+"</red>"))
+			if err != nil {
 				return
 			}
 		}
@@ -195,16 +200,32 @@ func (s *Sun) handlePlayer(player *Player) {
 		for {
 			pk, err := player.remote.conn.ReadPacket()
 			if err != nil {
-				s.ClosePlayer(player)
 				return
 			}
+			if pk, ok := pk.(*Transfer); ok {
+				s.TransferPlayer(player, IpAddr{Address: pk.Address, Port: pk.Port})
+				continue
+			}
+			if pk, ok := pk.(*Text); ok {
+				s.SendMessage(pk.Message)
+				continue
+			}
 			err = player.conn.WritePacket(pk)
-			if disconnect, ok := errors.Unwrap(err).(minecraft.DisconnectError); ok {
-				_ = s.Listener.Disconnect(player.conn, text.Colourf("<red>"+disconnect.Error()+"</red>"))
+			if err != nil {
 				return
 			}
 		}
 	}()
+}
+
+/*
+SendMessage is used for sending a Sun wide message to all the connected clients
+*/
+func (s *Sun) SendMessage(Message string) {
+	for _, player := range s.Players {
+		//Send raw chat to each player as client will accept it
+		_ = player.conn.WritePacket(&packet.Text{Message: Message, TextType: packet.TextTypeRaw})
+	}
 }
 
 /**
@@ -220,13 +241,15 @@ func (s *Sun) TransferPlayer(player *Player, addr IpAddr) {
 		s.ClosePlayer(player)
 		return
 	}
+	if player.remote.conn != nil {
+		_ = player.remote.conn.Close()
+	}
+	player.remote = &Remote{conn, addr}
 	//Start server
-	if err := conn.DoSpawn(); err != nil {
+	if err := player.remote.conn.DoSpawn(); err != nil {
 		panic(err)
 	}
-	//send out Buffered packets now so they don't get sent to the wrong connection
-	s.flushPlayer(player)
-	player.remote = &Remote{conn, addr}
+	s.handlePlayer(player)
 }
 
 /**

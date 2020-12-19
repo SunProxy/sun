@@ -142,7 +142,7 @@ func defaultConfig(config Config) Config {
 	emptyIp := IpAddr{}
 	if config.Hub == emptyIp {
 		config.Hub.Port = 19133
-		config.Hub.Ip = "0.0.0.0"
+		config.Hub.Address = "0.0.0.0"
 	}
 	emptyStatus := minecraft.ServerStatus{}
 	if config.Status == emptyStatus {

@@ -41,10 +41,10 @@ import (
 )
 
 type IpAddr struct {
-	Ip   string
-	Port uint16
+	Address string
+	Port    uint16
 }
 
 func (ip *IpAddr) ToString() string {
-	return fmt.Sprint(ip.Ip, ":", ip.Port)
+	return fmt.Sprint(ip.Address, ":", ip.Port)
 }

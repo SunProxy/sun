@@ -49,6 +49,6 @@ func main() {
 		_, _ = fmt.Scanln()
 		return
 	}
-	fmt.Println("Starting Sun On Port ", s.Listener.Addr().String(), "!")
+	fmt.Println("Starting Sun On " + s.Listener.Addr().String() + "!")
 	s.Start()
 }

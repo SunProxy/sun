@@ -50,7 +50,7 @@ jobs:
     #### expecting it in the form of
     ####   /go/src/github.com/circleci/go-tool
     ####   /go/src/bitbucket.org/circleci/go-tool
-    working_directory: /go/src/github.com/jviguy/sun
+    working_directory: /go/src/github.com/sun_proxy/sun
     steps:
       - checkout
 
@@ -67,8 +67,11 @@ jobs:
       - run:
           name: Build Binaries
           command: |
-            go build -o sun_linux;
-            env GOOS=windows GOARCH=amd64 go build -o sun_windows.exe;
+            go build -o sun_bot_linux64;
+            env GOARCH=arm go build -o sun_bot_linux32;
+            env GOOS=windows GOARCH=amd64 go build -o sun_bot_windows64.exe;
+            env GOOS=windows GOARCH=arm go build -o sun_bot_windows32.exe;
+            env GOOS=darwin GOARCH=amd64 go build -o sun_bot_darwin64;
       - run:
           name: make Artifact Folder
           command: |
@@ -76,10 +79,13 @@ jobs:
       - run:
           name: Move Binaries
           command: |
-            mv sun_linux /tmp/artifacts;
-            mv sun_windows.exe /tmp/artifacts;
+            mv sun_bot_linux64 /tmp/artifacts;
+            mv sun_bot_linux32 /tmp/artifacts;
+            mv sun_bot_windows64.exe /tmp/artifacts;
+            mv sun_bot_windows32.exe /tmp/artifacts;
+            mv sun_bot_darwin64 /tmp/artifacts;
       - discord/status:
           webhook: $DISCORD_WEBHOOK
 
       - store_artifacts:
-         path: /tmp/artifacts
+          path: /tmp/artifacts
