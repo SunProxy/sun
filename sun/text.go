@@ -42,7 +42,14 @@ import "github.com/sandertv/gophertunnel/minecraft/protocol"
 Text is sent by the server to send a message to all the connected players on the proxy.
 */
 type Text struct {
+	/*
+	Servers is an array of strings that contains the servers IP addresses the text message should be broadcast to
+	*/
 	Servers []string
+
+	/*
+	The text message
+	*/
 	Message string
 }
 
