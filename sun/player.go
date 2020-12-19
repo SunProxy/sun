@@ -95,6 +95,6 @@ func (p *Player) InitTranslations() {
 	p.UpdateTranslations()
 }
 
-func (p *Player) Remote() *Remote{
+func (p *Player) Remote() *Remote {
 	return p.remote
-	}
+}

@@ -43,7 +43,7 @@ Text is sent by the server to send a message to all the connected players on the
 */
 type Text struct {
 	Servers []string
-	Message          string
+	Message string
 }
 
 func (pk *Text) ID() uint32 {

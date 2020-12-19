@@ -45,6 +45,6 @@ type Remote struct {
 	addr IpAddr
 }
 
-func (r Remote) Addr() *IpAddr{
+func (r Remote) Addr() *IpAddr {
 	return &r.addr
 }
