@@ -212,8 +212,13 @@ func (s *Sun) handlePlayer(player *Player) {
 				continue
 			}
 			if pk, ok := pk.(*Text); ok {
-				s.SendMessage(pk.Message)
-				continue
+				for _, server := range pk.Servers {
+					for _, pl := range s.Players {
+						if pl.Remote().Addr().ToString() == server {
+							_ = pl.conn.WritePacket(&packet.Text{Message: pk.Message, TextType: packet.TextTypeRaw})
+						}
+					}
+				}
 			}
 			err = player.conn.WritePacket(pk)
 			if err != nil {

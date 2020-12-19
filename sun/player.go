@@ -94,3 +94,7 @@ func (p *Player) InitTranslations() {
 	//safe as p.Translations is no longer nil and should still have the same data which is correct
 	p.UpdateTranslations()
 }
+
+func (p *Player) Remote() *Remote{
+	return p.remote
+	}
