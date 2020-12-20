@@ -67,11 +67,11 @@ jobs:
       - run:
           name: Build Binaries
           command: |
-            go build -o sun_bot_linux64;
-            env GOARCH=arm go build -o sun_bot_linux32;
-            env GOOS=windows GOARCH=amd64 go build -o sun_bot_windows64.exe;
-            env GOOS=windows GOARCH=arm go build -o sun_bot_windows32.exe;
-            env GOOS=darwin GOARCH=amd64 go build -o sun_bot_darwin64;
+            go build -o sun_linux64;
+            env GOARCH=arm go build -o sun_linux32;
+            env GOOS=windows GOARCH=amd64 go build -o sun_windows64.exe;
+            env GOOS=windows GOARCH=arm go build -o sun_windows32.exe;
+            env GOOS=darwin GOARCH=amd64 go build -o sun_darwin64;
       - run:
           name: make Artifact Folder
           command: |
@@ -79,11 +79,11 @@ jobs:
       - run:
           name: Move Binaries
           command: |
-            mv sun_bot_linux64 /tmp/artifacts;
-            mv sun_bot_linux32 /tmp/artifacts;
-            mv sun_bot_windows64.exe /tmp/artifacts;
-            mv sun_bot_windows32.exe /tmp/artifacts;
-            mv sun_bot_darwin64 /tmp/artifacts;
+            mv sun_linux64 /tmp/artifacts;
+            mv sun_linux32 /tmp/artifacts;
+            mv sun_windows64.exe /tmp/artifacts;
+            mv sun_windows32.exe /tmp/artifacts;
+            mv sun_darwin64 /tmp/artifacts;
       - discord/status:
           webhook: $DISCORD_WEBHOOK
 
