@@ -23,7 +23,8 @@ This is called man in the middle proxying. <br>
 It allows for hacking proxies and custom packets / behavior to work no matter what server you are on. <br>
 SunProxy makes use of this for our Custom Transfer and Messaging system!
 
-
+# Discussion
+<a align="center">[Discord](https://discord.gg/g4SJUffja3) </a><br>
 # License
 ```
       ___           ___           ___
