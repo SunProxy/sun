@@ -24,7 +24,7 @@ It allows for hacking proxies and custom packets / behavior to work no matter wh
 SunProxy makes use of this for our Custom Transfer and Messaging system!
 
 # Discussion
-<a align="center">[Discord](https://discord.gg/EznccwcfWa) </a><br>
+<a align="center">[Discord](https://discord.gg/g4SJUffja3) </a><br>
 # License
 ```
       ___           ___           ___
