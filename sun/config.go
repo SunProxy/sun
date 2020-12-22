@@ -58,6 +58,12 @@ type Config struct {
 	Hub IpAddr
 
 	Port uint16
+
+	Tcp struct {
+		Enabled bool
+
+		Servers []string
+	}
 }
 
 func LoadConfig() (Config, error) {

@@ -47,7 +47,7 @@ import (
 
 type Sun struct {
 	Listener *minecraft.Listener
-	Players  map[string]*Player
+	Rays     map[string]*Ray
 	Hub      IpAddr
 	open     bool
 }
@@ -61,7 +61,7 @@ func (s StatusProvider) ServerStatus(playerCount int, _ int) minecraft.ServerSta
 	return *s.status
 }
 
-/**
+/*
 Returns a new sun with config the specified config hence W
 */
 func NewSunW(config Config) (*Sun, error) {
@@ -73,7 +73,7 @@ func NewSunW(config Config) (*Sun, error) {
 		return nil, err
 	}
 	registerPackets()
-	return &Sun{Listener: listener, Players: make(map[string]*Player, config.Status.MaxPlayers), Hub: config.Hub}, nil
+	return &Sun{Listener: listener, Rays: make(map[string]*Ray, config.Status.MaxPlayers), Hub: config.Hub}, nil
 }
 
 func registerPackets() {
@@ -81,7 +81,7 @@ func registerPackets() {
 	packet.Register(IDSunText, func() packet.Packet { return &Text{} })
 }
 
-/**
+/*
 Returns a new sun with a auto detected config
 */
 func NewSun() (*Sun, error) {
@@ -101,50 +101,29 @@ func (s *Sun) main() {
 			log.Println(err)
 			continue
 		}
-		pl := &Player{conn: conn.(*minecraft.Conn)}
+		ray := &Ray{conn: conn.(*minecraft.Conn)}
 		rconn, err := minecraft.Dialer{
-			ClientData:   pl.conn.ClientData(),
-			IdentityData: pl.conn.IdentityData()}.Dial("raknet", s.Hub.ToString())
+			ClientData:   ray.conn.ClientData(),
+			IdentityData: ray.conn.IdentityData()}.Dial("raknet", s.Hub.ToString())
 		if err != nil {
 			log.Println(err)
 			_ = s.Listener.Disconnect(conn.(*minecraft.Conn),
 				text.Colourf("<red>You Have been Disconnected!</red>"))
 			continue
 		}
-		pl.remote = &Remote{rconn, s.Hub}
-		s.AddPlayer(pl)
+		ray.remote = &Remote{rconn, s.Hub}
+		s.MakeRay(ray)
 	}
 }
 
-/**
-Starts the server synchronously depending on the bool
-*/
-func (s *Sun) start(async bool) {
-	if !s.open {
-		s.open = true
-	}
-	if !async {
-		s.main()
-		return
-	}
-	go s.main()
-}
-
-/**
-Starts the server synchronously
+/*
+Starts the proxy.
 */
 func (s *Sun) Start() {
-	s.start(false)
+	s.main()
 }
 
-/**
-Starts the server asynchronously
-*/
-func (s *Sun) StartAsync() {
-	s.start(true)
-}
-
-/**
+/*
 closes the Sun will cause the main() to break
 */
 func (s *Sun) Close() {
@@ -154,48 +133,48 @@ func (s *Sun) Close() {
 /*
 Adds a player to the sun and readies them
 */
-func (s *Sun) AddPlayer(player *Player) {
-	s.Players[player.conn.IdentityData().Identity] = player
+func (s *Sun) MakeRay(ray *Ray) {
+	s.Rays[ray.conn.IdentityData().Identity] = ray
 	//start the player up
 	var g sync.WaitGroup
 	g.Add(2)
 	go func() {
-		if err := player.conn.StartGame(player.remote.conn.GameData()); err != nil {
+		if err := ray.conn.StartGame(ray.remote.conn.GameData()); err != nil {
 			panic(err)
 		}
 		g.Done()
 	}()
 	go func() {
-		if err := player.remote.conn.DoSpawn(); err != nil {
+		if err := ray.remote.conn.DoSpawn(); err != nil {
 			panic(err)
 		}
 		g.Done()
 	}()
 	g.Wait()
 	//start translator
-	player.InitTranslations()
+	ray.InitTranslations()
 	//Start the two listener functions
-	s.handlePlayer(player)
+	s.handleRay(ray)
 }
 
 /*
 Closes a players session cleanly with a nice disconnection message!
 */
-func (s *Sun) ClosePlayer(player *Player) {
-	_ = s.Listener.Disconnect(player.conn, text.Colourf("<red>You Have been Disconnected!</red>"))
-	_ = player.remote.conn.Close()
-	delete(s.Players, player.conn.IdentityData().Identity)
+func (s *Sun) BreakRay(ray *Ray) {
+	_ = s.Listener.Disconnect(ray.conn, text.Colourf("<red>You Have been Disconnected!</red>"))
+	_ = ray.remote.conn.Close()
+	delete(s.Rays, ray.conn.IdentityData().Identity)
 }
 
-func (s *Sun) handlePlayer(player *Player) {
+func (s *Sun) handleRay(ray *Ray) {
 	go func() {
 		for {
-			pk, err := player.conn.ReadPacket()
+			pk, err := ray.conn.ReadPacket()
 			if err != nil {
 				return
 			}
-			TranslateClientEntityRuntimeIds(player, pk)
-			err = player.remote.conn.WritePacket(pk)
+			TranslateClientEntityRuntimeIds(ray, pk)
+			err = ray.remote.conn.WritePacket(pk)
 			if err != nil {
 				return
 			}
@@ -203,13 +182,13 @@ func (s *Sun) handlePlayer(player *Player) {
 	}()
 	go func() {
 		for {
-			pk, err := player.remote.conn.ReadPacket()
+			pk, err := ray.remote.conn.ReadPacket()
 			if err != nil {
 				return
 			}
-			TranslateServerEntityRuntimeIds(player, pk)
+			TranslateServerEntityRuntimeIds(ray, pk)
 			if pk, ok := pk.(*Transfer); ok {
-				s.TransferPlayer(player, IpAddr{Address: pk.Address, Port: pk.Port})
+				s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
 				continue
 			}
 			if pk, ok := pk.(*Text); ok {
@@ -223,7 +202,7 @@ func (s *Sun) handlePlayer(player *Player) {
 				s.SendMessage(pk.Message)
 				continue
 			}
-			err = player.conn.WritePacket(pk)
+			err = ray.conn.WritePacket(pk)
 			if err != nil {
 				return
 			}
@@ -231,11 +210,11 @@ func (s *Sun) handlePlayer(player *Player) {
 	}()
 }
 
-func (s *Sun) SendMessageToServers(Message string, Servers []string)  {
+func (s *Sun) SendMessageToServers(Message string, Servers []string) {
 	for _, server := range Servers {
-		for _, pl := range s.Players {
-			if pl.Remote().Addr().ToString() == server {
-				_ = pl.conn.WritePacket(&packet.Text{Message: Message, TextType: packet.TextTypeRaw})
+		for _, ray := range s.Rays {
+			if ray.Remote().Addr().ToString() == server {
+				_ = ray.conn.WritePacket(&packet.Text{Message: Message, TextType: packet.TextTypeRaw})
 			}
 		}
 	}
@@ -245,47 +224,47 @@ func (s *Sun) SendMessageToServers(Message string, Servers []string)  {
 SendMessage is used for sending a Sun wide message to all the connected clients
 */
 func (s *Sun) SendMessage(Message string) {
-	for _, player := range s.Players {
+	for _, ray := range s.Rays {
 		//Send raw chat to each player as client will accept it
-		_ = player.conn.WritePacket(&packet.Text{Message: Message, TextType: packet.TextTypeRaw})
+		_ = ray.conn.WritePacket(&packet.Text{Message: Message, TextType: packet.TextTypeRaw})
 	}
 }
 
 /*
 Changes a players remote and readies the connection
 */
-func (s *Sun) TransferPlayer(player *Player, addr IpAddr) {
+func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 	//Dial the new server based on the ipaddr
 	conn, err := minecraft.Dialer{
-		ClientData:   player.conn.ClientData(),
-		IdentityData: player.conn.IdentityData()}.Dial("raknet", addr.ToString())
+		ClientData:   ray.conn.ClientData(),
+		IdentityData: ray.conn.IdentityData()}.Dial("raknet", addr.ToString())
 	if err != nil {
 		//cleanly close player
-		s.ClosePlayer(player)
+		s.BreakRay(ray)
 		return
 	}
-	if player.remote.conn != nil {
-		_ = player.remote.conn.Close()
+	if ray.remote.conn != nil {
+		_ = ray.remote.conn.Close()
 	}
-	player.remote = &Remote{conn, addr}
+	ray.remote = &Remote{conn, addr}
 	//Start server
-	if err := player.remote.conn.DoSpawn(); err != nil {
+	if err := ray.remote.conn.DoSpawn(); err != nil {
 		panic(err)
 	}
 	//force dimension change
-	_ = player.conn.WritePacket(&packet.ChangeDimension{Dimension: packet.DimensionEnd, Position: conn.GameData().PlayerPosition})
-	s.handlePlayer(player)
+	_ = ray.conn.WritePacket(&packet.ChangeDimension{Dimension: packet.DimensionEnd, Position: conn.GameData().PlayerPosition})
+	s.handleRay(ray)
 }
 
 /*
 Flushes both connections a player might have for transfer
 */
-func (s *Sun) flushPlayer(player *Player) {
-	err := player.conn.Flush()
+func (s *Sun) flushPlayer(ray *Ray) {
+	err := ray.conn.Flush()
 	if err != nil {
 		log.Println(err)
 	}
-	err = player.remote.conn.Flush()
+	err = ray.remote.conn.Flush()
 	if err != nil {
 		log.Println(err)
 	}

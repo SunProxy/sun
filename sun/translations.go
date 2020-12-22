@@ -43,7 +43,7 @@ because it looks bad in the sun.go
 
 import "github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 
-func TranslateClientEntityRuntimeIds(player *Player, pk packet.Packet) {
+func TranslateClientEntityRuntimeIds(player *Ray, pk packet.Packet) {
 	switch pk := pk.(type) {
 	case *packet.CommandBlockUpdate:
 		{
@@ -74,7 +74,7 @@ func TranslateClientEntityRuntimeIds(player *Player, pk packet.Packet) {
 	}
 }
 
-func TranslateServerEntityRuntimeIds(player *Player, pk packet.Packet) {
+func TranslateServerEntityRuntimeIds(player *Ray, pk packet.Packet) {
 	switch pk := pk.(type) {
 	case *packet.UpdateTrade:
 		{

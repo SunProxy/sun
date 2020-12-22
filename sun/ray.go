@@ -40,7 +40,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 )
 
-type Player struct {
+type Ray struct {
 	conn         *minecraft.Conn
 	remote       *Remote
 	Translations *TranslatorMappings
@@ -56,7 +56,7 @@ type TranslatorMappings struct {
 /*
 Translates the entityUniqueID from a given packet to fix mix matched IDs
 */
-func (p *Player) TranslateEntityUniqueID(entityUniqueID int64) int64 {
+func (p *Ray) TranslateEntityUniqueID(entityUniqueID int64) int64 {
 	if entityUniqueID == p.Translations.OriginalEntityUniqueID {
 		return p.Translations.CurrentEntityUniqueID
 	} else if entityUniqueID == p.Translations.CurrentEntityUniqueID {
@@ -68,7 +68,7 @@ func (p *Player) TranslateEntityUniqueID(entityUniqueID int64) int64 {
 /*
 Translates the entityRuntimeID from a given packet to fix mix matched IDs
 */
-func (p *Player) TranslateEntityRuntimeID(entityRuntimeID uint64) uint64 {
+func (p *Ray) TranslateEntityRuntimeID(entityRuntimeID uint64) uint64 {
 	if entityRuntimeID == p.Translations.OriginalEntityRuntimeID {
 		return p.Translations.CurrentEntityRuntimeID
 	} else if entityRuntimeID == p.Translations.CurrentEntityRuntimeID {
@@ -80,7 +80,7 @@ func (p *Player) TranslateEntityRuntimeID(entityRuntimeID uint64) uint64 {
 /*
 Updates the TranslatorMappings for the said Player
 */
-func (p *Player) UpdateTranslations() {
+func (p *Ray) UpdateTranslations() {
 	p.Translations.CurrentEntityRuntimeID = p.conn.GameData().EntityRuntimeID
 	p.Translations.CurrentEntityUniqueID = p.conn.GameData().EntityUniqueID
 }
@@ -88,13 +88,13 @@ func (p *Player) UpdateTranslations() {
 /*
 Should only be called when the player is first joined / added
 */
-func (p *Player) InitTranslations() {
+func (p *Ray) InitTranslations() {
 	p.Translations = &TranslatorMappings{OriginalEntityUniqueID: p.conn.GameData().EntityUniqueID,
 		OriginalEntityRuntimeID: p.conn.GameData().EntityRuntimeID}
 	//safe as p.Translations is no longer nil and should still have the same data which is correct
 	p.UpdateTranslations()
 }
 
-func (p *Player) Remote() *Remote {
+func (p *Ray) Remote() *Remote {
 	return p.remote
 }
