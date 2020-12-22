@@ -49,7 +49,6 @@ type Sun struct {
 	Listener *minecraft.Listener
 	Rays     map[string]*Ray
 	Hub      IpAddr
-	open     bool
 }
 
 type StatusProvider struct {
@@ -94,7 +93,7 @@ func NewSun() (*Sun, error) {
 
 func (s *Sun) main() {
 	defer s.Listener.Close()
-	for s.open {
+	for {
 		//Listener won't be closed unless it is manually done
 		conn, err := s.Listener.Accept()
 		if err != nil {
@@ -121,13 +120,6 @@ Starts the proxy.
 */
 func (s *Sun) Start() {
 	s.main()
-}
-
-/*
-closes the Sun will cause the main() to break
-*/
-func (s *Sun) Close() {
-	s.open = false
 }
 
 /*
