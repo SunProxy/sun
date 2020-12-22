@@ -243,8 +243,6 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 	if err := ray.remote.conn.DoSpawn(); err != nil {
 		panic(err)
 	}
-	//force dimension change
-	_ = ray.conn.WritePacket(&packet.ChangeDimension{Dimension: packet.DimensionEnd, Position: conn.GameData().PlayerPosition})
 	s.handleRay(ray)
 }
 
