@@ -260,6 +260,13 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 		s.BreakRay(ray)
 		return
 	}
+	//do spawn
+	err = ray.bufferConn.conn.DoSpawn()
+	if err != nil {
+		//cleanly close player
+		s.BreakRay(ray)
+		return
+	}
 	//Another twisted copy because fuk im lazy
 	ray.bufferConn = &Remote{conn, addr}
 	_ = ray.conn.WritePacket(&packet.ChangeDimension{
