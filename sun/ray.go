@@ -43,7 +43,9 @@ import (
 type Ray struct {
 	conn         *minecraft.Conn
 	remote       *Remote
+	bufferConn   *Remote
 	Translations *TranslatorMappings
+	transferring bool
 }
 
 type TranslatorMappings struct {
@@ -56,11 +58,11 @@ type TranslatorMappings struct {
 /*
 Translates the entityUniqueID from a given packet to fix mix matched IDs
 */
-func (p *Ray) TranslateEntityUniqueID(entityUniqueID int64) int64 {
-	if entityUniqueID == p.Translations.OriginalEntityUniqueID {
-		return p.Translations.CurrentEntityUniqueID
-	} else if entityUniqueID == p.Translations.CurrentEntityUniqueID {
-		return p.Translations.OriginalEntityUniqueID
+func (r *Ray) TranslateEntityUniqueID(entityUniqueID int64) int64 {
+	if entityUniqueID == r.Translations.OriginalEntityUniqueID {
+		return r.Translations.CurrentEntityUniqueID
+	} else if entityUniqueID == r.Translations.CurrentEntityUniqueID {
+		return r.Translations.OriginalEntityUniqueID
 	}
 	return entityUniqueID
 }
@@ -68,11 +70,11 @@ func (p *Ray) TranslateEntityUniqueID(entityUniqueID int64) int64 {
 /*
 Translates the entityRuntimeID from a given packet to fix mix matched IDs
 */
-func (p *Ray) TranslateEntityRuntimeID(entityRuntimeID uint64) uint64 {
-	if entityRuntimeID == p.Translations.OriginalEntityRuntimeID {
-		return p.Translations.CurrentEntityRuntimeID
-	} else if entityRuntimeID == p.Translations.CurrentEntityRuntimeID {
-		return p.Translations.OriginalEntityRuntimeID
+func (r *Ray) TranslateEntityRuntimeID(entityRuntimeID uint64) uint64 {
+	if entityRuntimeID == r.Translations.OriginalEntityRuntimeID {
+		return r.Translations.CurrentEntityRuntimeID
+	} else if entityRuntimeID == r.Translations.CurrentEntityRuntimeID {
+		return r.Translations.OriginalEntityRuntimeID
 	}
 	return entityRuntimeID
 }
@@ -80,21 +82,38 @@ func (p *Ray) TranslateEntityRuntimeID(entityRuntimeID uint64) uint64 {
 /*
 Updates the TranslatorMappings for the said Player
 */
-func (p *Ray) UpdateTranslations() {
-	p.Translations.CurrentEntityRuntimeID = p.conn.GameData().EntityRuntimeID
-	p.Translations.CurrentEntityUniqueID = p.conn.GameData().EntityUniqueID
+func (r *Ray) UpdateTranslations() {
+	r.Translations.CurrentEntityRuntimeID = r.conn.GameData().EntityRuntimeID
+	r.Translations.CurrentEntityUniqueID = r.conn.GameData().EntityUniqueID
 }
 
 /*
 Should only be called when the player is first joined / added
 */
-func (p *Ray) InitTranslations() {
-	p.Translations = &TranslatorMappings{OriginalEntityUniqueID: p.conn.GameData().EntityUniqueID,
-		OriginalEntityRuntimeID: p.conn.GameData().EntityRuntimeID}
+func (r *Ray) InitTranslations() {
+	r.Translations = &TranslatorMappings{OriginalEntityUniqueID: r.conn.GameData().EntityUniqueID,
+		OriginalEntityRuntimeID: r.conn.GameData().EntityRuntimeID}
 	//safe as p.Translations is no longer nil and should still have the same data which is correct
-	p.UpdateTranslations()
+	r.UpdateTranslations()
 }
 
-func (p *Ray) Remote() *Remote {
-	return p.remote
+/**
+Returns the Remote Connection the player has currently.
+*/
+func (r *Ray) Remote() *Remote {
+	return r.remote
+}
+
+/**
+Returns a bool representing if a player is Transferring.
+*/
+func (r *Ray) Transferring() bool {
+	return r.transferring
+}
+
+/**
+BufferConn is the connection used to temp out new conns also named temp conn
+*/
+func (r *Ray) BufferConn() *Remote {
+	return r.bufferConn
 }

@@ -165,6 +165,27 @@ func (s *Sun) handleRay(ray *Ray) {
 			if err != nil {
 				return
 			}
+			switch pk := pk.(type) {
+			case *packet.PlayerAction:
+				//hehehehehehehehehehehehehehehehehehehehehehehe thx
+				if pk.ActionType == packet.PlayerActionDimensionChangeDone && ray.Transferring() {
+					ray.transferring = false
+
+					old := ray.Remote().conn
+					bufferC := ray.bufferConn
+
+					pos := bufferC.conn.GameData().PlayerPosition
+					_ = bufferC.conn.WritePacket(&packet.ChangeDimension{
+						Dimension: packet.DimensionOverworld,
+						Position:  pos,
+					})
+
+					_ = old.Close()
+
+					ray.remote = bufferC
+					ray.bufferConn = nil
+				}
+			}
 			TranslateClientEntityRuntimeIds(ray, pk)
 			err = ray.remote.conn.WritePacket(pk)
 			if err != nil {
@@ -226,6 +247,10 @@ func (s *Sun) SendMessage(Message string) {
 Changes a players remote and readies the connection
 */
 func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
+	if ray.transferring {
+		return
+	}
+	ray.transferring = true
 	//Dial the new server based on the ipaddr
 	conn, err := minecraft.Dialer{
 		ClientData:   ray.conn.ClientData(),
@@ -235,13 +260,24 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 		s.BreakRay(ray)
 		return
 	}
-	if ray.remote.conn != nil {
-		_ = ray.remote.conn.Close()
-	}
-	ray.remote = &Remote{conn, addr}
-	//Start server
-	if err := ray.remote.conn.DoSpawn(); err != nil {
-		panic(err)
+	//Another twisted copy because fuk im lazy
+	ray.bufferConn = &Remote{conn, addr}
+	_ = ray.conn.WritePacket(&packet.ChangeDimension{
+		Dimension: packet.DimensionNether,
+		Position:  ray.conn.GameData().PlayerPosition,
+	})
+	//send empty chunk data THX TWISTED IM LAZY lmao.......
+	chunkX := int32(ray.conn.GameData().PlayerPosition.X()) >> 4
+	chunkZ := int32(ray.conn.GameData().PlayerPosition.Z()) >> 4
+	for x := int32(-1); x <= 1; x++ {
+		for z := int32(-1); z <= 1; z++ {
+			_ = ray.conn.WritePacket(&packet.LevelChunk{
+				ChunkX:        chunkX + x,
+				ChunkZ:        chunkZ + z,
+				SubChunkCount: 0,
+				RawPayload:    make([]byte, 256),
+			})
+		}
 	}
 	s.handleRay(ray)
 }
