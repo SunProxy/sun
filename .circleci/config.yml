@@ -67,9 +67,9 @@ jobs:
       - run:
           name: Build Binaries
           command: |
-            go build -o sun_linux64;
+            env CGO_ENABLED=1 go build -o -race sun_linux64;
             env GOARCH=arm go build -o sun_linux32;
-            env GOOS=windows GOARCH=amd64 go build -race -o sun_windows64.exe;
+            env GOOS=windows GOARCH=amd64 CGO_ENABLED=1 go build -race -o sun_windows64.exe;
             env GOOS=windows GOARCH=arm go build -o sun_windows32.exe;
             env GOOS=darwin GOARCH=amd64 go build -o sun_darwin64;
       - run:
