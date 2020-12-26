@@ -12,7 +12,7 @@ Client | Direction | Server
 Drops item |  -> | Processes request
 Spawns Item on the ground | <- | Sends back a inventory transaction and AddActor packet
 
-That is known as Peer To Peer. Now we get into the more juicy graphs.
+That is known as Direct Connection or rather just a regular connection. Now we get into the more juicy graphs.
 
 Client | Direction | Proxy | Direction | Server
 ------------ | ------------- | ------------- | ------------- | -------------
