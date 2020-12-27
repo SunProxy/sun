@@ -41,6 +41,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
+	"go.uber.org/atomic"
 	"log"
 	"net"
 	"sync"
@@ -52,14 +53,16 @@ type Sun struct {
 	Hub       IpAddr
 	Planets   []*Planet
 	PListener net.Listener
+	Status    StatusProvider
 }
 
 type StatusProvider struct {
-	status *minecraft.ServerStatus
+	status  *minecraft.ServerStatus
+	playerc *atomic.Int64
 }
 
-func (s StatusProvider) ServerStatus(playerCount int, _ int) minecraft.ServerStatus {
-	s.status.PlayerCount = playerCount
+func (s StatusProvider) ServerStatus(_ int, _ int) minecraft.ServerStatus {
+	s.status.PlayerCount = int(s.playerc.Load())
 	return *s.status
 }
 
@@ -67,9 +70,10 @@ func (s StatusProvider) ServerStatus(playerCount int, _ int) minecraft.ServerSta
 Returns a new sun with config the specified config hence W
 */
 func NewSunW(config Config) (*Sun, error) {
+	status := StatusProvider{&config.Status, atomic.NewInt64(0)}
 	listener, err := minecraft.ListenConfig{
 		AuthenticationDisabled: true,
-		StatusProvider:         StatusProvider{&config.Status},
+		StatusProvider:         status,
 	}.Listen("raknet", fmt.Sprint(":", config.Port))
 	if err != nil {
 		return nil, err
@@ -80,7 +84,7 @@ func NewSunW(config Config) (*Sun, error) {
 		return nil, err
 	}
 	registerPackets()
-	return &Sun{Listener: listener, PListener: plistener, Rays: make(map[string]*Ray, config.Status.MaxPlayers), Hub: config.Hub, Planets: make([]*Planet, 0)}, nil
+	return &Sun{Listener: listener, PListener: plistener, Status: status, Rays: make(map[string]*Ray, config.Status.MaxPlayers), Hub: config.Hub, Planets: make([]*Planet, 0)}, nil
 }
 
 func registerPackets() {
@@ -165,6 +169,8 @@ func (s *Sun) MakeRay(ray *Ray) {
 	g.Wait()
 	//start translator
 	ray.InitTranslations()
+	//Add to player count
+	s.Status.playerc.Add(1)
 	//Start the two listener functions
 	s.handleRay(ray)
 }
