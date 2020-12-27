@@ -42,14 +42,16 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	"log"
+	"net"
 	"sync"
 )
 
 type Sun struct {
-	Listener *minecraft.Listener
-	Rays     map[string]*Ray
-	Hub      IpAddr
-	Planets  []*Planet
+	Listener  *minecraft.Listener
+	Rays      map[string]*Ray
+	Hub       IpAddr
+	Planets   []*Planet
+	PListener net.Listener
 }
 
 type StatusProvider struct {
@@ -72,8 +74,13 @@ func NewSunW(config Config) (*Sun, error) {
 	if err != nil {
 		return nil, err
 	}
+	//hehehehehehe
+	plistener, err := net.Listen("tcp", ":42069")
+	if err != nil {
+		return nil, err
+	}
 	registerPackets()
-	return &Sun{Listener: listener, Rays: make(map[string]*Ray, config.Status.MaxPlayers), Hub: config.Hub, Planets: make([]*Planet, 0)}, nil
+	return &Sun{Listener: listener, PListener: plistener, Rays: make(map[string]*Ray, config.Status.MaxPlayers), Hub: config.Hub, Planets: make([]*Planet, 0)}, nil
 }
 
 func registerPackets() {
@@ -94,6 +101,18 @@ func NewSun() (*Sun, error) {
 
 func (s *Sun) main() {
 	defer s.Listener.Close()
+	go func() {
+		for {
+			conn, err := s.PListener.Accept()
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			//TODO: Implement Ids for Planets
+			pl := &Planet{conn: conn}
+			s.AddPlanet(pl)
+		}
+	}()
 	for {
 		//Listener won't be closed unless it is manually done
 		conn, err := s.Listener.Accept()
@@ -305,5 +324,9 @@ func (s *Sun) flushPlayer(ray *Ray) {
 }
 
 func (s *Sun) handlePlanet(planet *Planet) {
+
+}
+
+func (s *Sun) AddPlanet(planet *Planet) {
 
 }

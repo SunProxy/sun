@@ -9,4 +9,5 @@ hub:
 port: 19132
 tcp:
   enabled: false
-  servers: []
+  #steal my key i dare u lmao
+  key: 6Jmcu9Iwj9WkTCEJ1aCqsXH2M
