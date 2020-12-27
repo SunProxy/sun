@@ -49,6 +49,7 @@ type Sun struct {
 	Listener *minecraft.Listener
 	Rays     map[string]*Ray
 	Hub      IpAddr
+	Planets  []*Planet
 }
 
 type StatusProvider struct {
@@ -72,7 +73,7 @@ func NewSunW(config Config) (*Sun, error) {
 		return nil, err
 	}
 	registerPackets()
-	return &Sun{Listener: listener, Rays: make(map[string]*Ray, config.Status.MaxPlayers), Hub: config.Hub}, nil
+	return &Sun{Listener: listener, Rays: make(map[string]*Ray, config.Status.MaxPlayers), Hub: config.Hub, Planets: make([]*Planet, 0)}, nil
 }
 
 func registerPackets() {
@@ -175,7 +176,7 @@ func (s *Sun) handleRay(ray *Ray) {
 					bufferC := ray.bufferConn
 
 					pos := bufferC.conn.GameData().PlayerPosition
-					_ = bufferC.conn.WritePacket(&packet.ChangeDimension{
+					_ = ray.conn.WritePacket(&packet.ChangeDimension{
 						Dimension: packet.DimensionOverworld,
 						Position:  pos,
 					})
@@ -202,7 +203,7 @@ func (s *Sun) handleRay(ray *Ray) {
 			TranslateServerEntityRuntimeIds(ray, pk)
 			if pk, ok := pk.(*Transfer); ok {
 				s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
-				continue
+				return
 			}
 			if pk, ok := pk.(*Text); ok {
 				//Only iterate if we have to.
@@ -301,4 +302,8 @@ func (s *Sun) flushPlayer(ray *Ray) {
 	if err != nil {
 		log.Println(err)
 	}
+}
+
+func (s *Sun) handlePlanet(planet *Planet) {
+
 }
