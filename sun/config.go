@@ -61,6 +61,8 @@ type Config struct {
 
 	Proxy struct {
 		Port uint16
+
+		XboxAuthentication bool
 	}
 
 	Tcp struct {

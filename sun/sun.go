@@ -78,7 +78,7 @@ Returns a new sun with config the specified config hence W
 func NewSunW(config Config) (*Sun, error) {
 	status := StatusProvider{config.Status, atomic.NewInt64(0)}
 	listener, err := minecraft.ListenConfig{
-		AuthenticationDisabled: true,
+		AuthenticationDisabled: !config.Proxy.XboxAuthentication,
 		StatusProvider:         status,
 	}.Listen("raknet", fmt.Sprint(":", config.Proxy.Port))
 	if err != nil {
