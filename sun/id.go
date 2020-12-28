@@ -37,6 +37,6 @@ SOFTWARE.
 package sun
 
 const (
-	IDSunTransfer = iota + 300
+	IDSunTransfer = iota + 0xFA
 	IDSunText
 )

@@ -46,7 +46,9 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"math/rand"
 	"os"
+	"time"
 )
 
 /**
@@ -57,7 +59,21 @@ type Config struct {
 
 	Hub IpAddr
 
-	Port uint16
+	Proxy struct {
+		Port uint16
+	}
+
+	Tcp struct {
+		/*
+			Specifies if the proxy should run the tcp server
+		*/
+		Enabled bool
+
+		/*
+			Used to login into the tcp server
+		*/
+		Key string
+	}
 }
 
 func LoadConfig() (Config, error) {
@@ -136,8 +152,8 @@ func LoadGobConfig() (Config, error) {
 Should take in a empty config
 */
 func defaultConfig(config Config) Config {
-	if config.Port == 0 {
-		config.Port = 19132
+	if config.Proxy.Port == 0 {
+		config.Proxy.Port = 19132
 	}
 	emptyIp := IpAddr{}
 	if config.Hub == emptyIp {
@@ -150,5 +166,25 @@ func defaultConfig(config Config) Config {
 		config.Status.PlayerCount = 0
 		config.Status.ServerName = text.Colourf("<yellow>Sun Proxy</yellow>")
 	}
+	//Generate a random Key if its empty
+	if config.Tcp.Key == "" {
+		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+		Chars := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		var key = make([]rune, 10)
+		for i := range key {
+			key[i] = rune(Chars[rnd.Intn(len(Chars))])
+		}
+		config.Tcp.Key = GenKey()
+	}
 	return config
+}
+
+func GenKey() string {
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+	Chars := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	var key = make([]rune, 25)
+	for i := range key {
+		key[i] = rune(Chars[rnd.Intn(len(Chars))])
+	}
+	return string(key)
 }
