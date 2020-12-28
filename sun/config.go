@@ -59,7 +59,9 @@ type Config struct {
 
 	Hub IpAddr
 
-	Port uint16
+	Proxy struct {
+		Port uint16
+	}
 
 	Tcp struct {
 		/*
@@ -150,8 +152,8 @@ func LoadGobConfig() (Config, error) {
 Should take in a empty config
 */
 func defaultConfig(config Config) Config {
-	if config.Port == 0 {
-		config.Port = 19132
+	if config.Proxy.Port == 0 {
+		config.Proxy.Port = 19132
 	}
 	emptyIp := IpAddr{}
 	if config.Hub == emptyIp {

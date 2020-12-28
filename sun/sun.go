@@ -47,6 +47,8 @@ import (
 	"sync"
 )
 
+var emptychunk = make([]byte, 257)
+
 type Sun struct {
 	Listener  *minecraft.Listener
 	Rays      map[string]*Ray
@@ -57,24 +59,28 @@ type Sun struct {
 }
 
 type StatusProvider struct {
-	status  *minecraft.ServerStatus
+	ogs     minecraft.ServerStatus
 	playerc *atomic.Int64
 }
 
 func (s StatusProvider) ServerStatus(_ int, _ int) minecraft.ServerStatus {
-	s.status.PlayerCount = int(s.playerc.Load())
-	return *s.status
+	return minecraft.ServerStatus{
+		ServerName:  s.ogs.ServerName,
+		PlayerCount: int(s.playerc.Load()),
+		MaxPlayers:  s.ogs.MaxPlayers,
+		ShowVersion: s.ogs.ShowVersion,
+	}
 }
 
 /*
 Returns a new sun with config the specified config hence W
 */
 func NewSunW(config Config) (*Sun, error) {
-	status := StatusProvider{&config.Status, atomic.NewInt64(0)}
+	status := StatusProvider{config.Status, atomic.NewInt64(0)}
 	listener, err := minecraft.ListenConfig{
 		AuthenticationDisabled: true,
 		StatusProvider:         status,
-	}.Listen("raknet", fmt.Sprint(":", config.Port))
+	}.Listen("raknet", fmt.Sprint(":", config.Proxy.Port))
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +234,7 @@ func (s *Sun) handleRay(ray *Ray) {
 			TranslateServerEntityRuntimeIds(ray, pk)
 			if pk, ok := pk.(*Transfer); ok {
 				s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
-				return
+				continue
 			}
 			if pk, ok := pk.(*Text); ok {
 				//Only iterate if we have to.
@@ -308,7 +314,7 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 				ChunkX:        chunkX + x,
 				ChunkZ:        chunkZ + z,
 				SubChunkCount: 0,
-				RawPayload:    make([]byte, 256),
+				RawPayload:    emptychunk,
 			})
 		}
 	}
