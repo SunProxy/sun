@@ -90,7 +90,12 @@ func NewSunW(config Config) (*Sun, error) {
 		return nil, err
 	}
 	registerPackets()
-	return &Sun{Listener: listener, PListener: plistener, Status: status, Rays: make(map[string]*Ray, config.Status.MaxPlayers), Hub: config.Hub, Planets: make([]*Planet, 0)}, nil
+	return &Sun{Listener: listener,
+		PListener: plistener,
+		Status:    status,
+		Rays: make(map[string]*Ray,
+			config.Status.MaxPlayers),
+		Hub: config.Hub, Planets: make([]*Planet, 0)}, nil
 }
 
 func registerPackets() {
@@ -216,6 +221,7 @@ func (s *Sun) handleRay(ray *Ray) {
 
 					ray.remote = bufferC
 					ray.bufferConn = nil
+					continue
 				}
 			}
 			TranslateClientEntityRuntimeIds(ray, pk)
@@ -292,6 +298,8 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 		s.BreakRay(ray)
 		return
 	}
+	//Another twisted copy because fuk im lazy
+	ray.bufferConn = &Remote{conn, addr}
 	//do spawn
 	err = ray.bufferConn.conn.DoSpawn()
 	if err != nil {
@@ -299,8 +307,6 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 		s.BreakRay(ray)
 		return
 	}
-	//Another twisted copy because fuk im lazy
-	ray.bufferConn = &Remote{conn, addr}
 	_ = ray.conn.WritePacket(&packet.ChangeDimension{
 		Dimension: packet.DimensionNether,
 		Position:  ray.conn.GameData().PlayerPosition,
@@ -318,7 +324,6 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 			})
 		}
 	}
-	s.handleRay(ray)
 }
 
 /*
