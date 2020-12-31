@@ -36,7 +36,11 @@ SOFTWARE.
 
 package sun
 
+/**
+The RakNet connection or rather mcpe packet ids
+*/
 const (
 	IDSunTransfer = iota + 0xFA
 	IDSunText
+	IDIpForward
 )

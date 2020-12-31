@@ -63,6 +63,8 @@ type Config struct {
 		Port uint16
 
 		XboxAuthentication bool
+
+		IpForwarding bool
 	}
 
 	Tcp struct {

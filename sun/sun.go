@@ -39,11 +39,14 @@ package sun
 import (
 	"fmt"
 	"github.com/sandertv/gophertunnel/minecraft"
+	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	"go.uber.org/atomic"
 	"log"
 	"net"
+	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -202,29 +205,50 @@ func (s *Sun) handleRay(ray *Ray) {
 			if err != nil {
 				return
 			}
+			TranslateClientEntityRuntimeIds(ray, pk)
 			switch pk := pk.(type) {
 			case *packet.PlayerAction:
 				//hehehehehehehehehehehehehehehehehehehehehehehe thx
 				if pk.ActionType == packet.PlayerActionDimensionChangeDone && ray.Transferring() {
+					log.Println("Received Dimension done with the player transferring for ", ray.conn.IdentityData().DisplayName)
 					ray.transferring = false
 
 					old := ray.Remote().conn
 					bufferC := ray.bufferConn
 
 					pos := bufferC.conn.GameData().PlayerPosition
-					_ = ray.conn.WritePacket(&packet.ChangeDimension{
+					err = ray.conn.WritePacket(&packet.ChangeDimension{
 						Dimension: packet.DimensionOverworld,
 						Position:  pos,
+						Respawn:   false,
 					})
-
-					_ = old.Close()
-
+					if err != nil {
+						log.Println("error changing dimension back to the overworld for transfer for ", ray.conn.IdentityData().DisplayName+"\n", err)
+						continue
+					}
+					err = old.Close()
+					if err != nil {
+						log.Println("error ", ray.conn.IdentityData().DisplayName+"\n", err)
+						continue
+					}
 					ray.remote = bufferC
 					ray.bufferConn = nil
+					log.Println("Successfully completed transfer for player ", ray.conn.IdentityData().DisplayName)
+					continue
+				}
+			case *packet.CommandRequest:
+				args := strings.Split(pk.CommandLine, " ")
+				switch args[0] {
+				case "transfer":
+					ip := args[1]
+					port, _ := strconv.Atoi(args[2])
+					_ = ray.conn.WritePacket(&packet.Text{
+						Message:  text.Colourf("<yellow>Starting Transfer To %s</yellow>", ip),
+						TextType: packet.TextTypeRaw})
+					s.TransferRay(ray, IpAddr{Address: ip, Port: uint16(port)})
 					continue
 				}
 			}
-			TranslateClientEntityRuntimeIds(ray, pk)
 			err = ray.remote.conn.WritePacket(pk)
 			if err != nil {
 				return
@@ -238,6 +262,10 @@ func (s *Sun) handleRay(ray *Ray) {
 				return
 			}
 			TranslateServerEntityRuntimeIds(ray, pk)
+			if pk, ok := pk.(*packet.AvailableCommands); ok {
+				pk.Commands = append(pk.Commands, protocol.Command{
+					Name: "transfer", Description: "Utilizes Sun Proxy's Fast Transfer!"})
+			}
 			if pk, ok := pk.(*Transfer); ok {
 				s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
 				continue
@@ -285,7 +313,9 @@ func (s *Sun) SendMessage(Message string) {
 Changes a players remote and readies the connection
 */
 func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
+	log.Println("Transfer request received for ", ray.conn.IdentityData().DisplayName)
 	if ray.transferring {
+		log.Println("Transfer scrapped because it was already transferring for ", ray.conn.IdentityData().DisplayName)
 		return
 	}
 	ray.transferring = true
@@ -294,34 +324,44 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 		ClientData:   ray.conn.ClientData(),
 		IdentityData: ray.conn.IdentityData()}.Dial("raknet", addr.ToString())
 	if err != nil {
-		//cleanly close player
-		s.BreakRay(ray)
+		log.Println("error dialing new server for transfer request for ", ray.conn.IdentityData().DisplayName+"\n", err)
+		ray.transferring = false
 		return
 	}
 	//Another twisted copy because fuk im lazy
 	ray.bufferConn = &Remote{conn, addr}
+	log.Println("Transfer bufferConn is now assigned for ", ray.conn.IdentityData().DisplayName)
 	//do spawn
 	err = ray.bufferConn.conn.DoSpawn()
 	if err != nil {
+		log.Println("error do spawning the new server for transfer request for ", ray.conn.IdentityData().DisplayName+"\n", err)
 		//cleanly close player
 		s.BreakRay(ray)
 		return
 	}
-	_ = ray.conn.WritePacket(&packet.ChangeDimension{
+	log.Println("DoSpawned the BufferConn successfully ", ray.conn.IdentityData().DisplayName)
+	err = ray.conn.WritePacket(&packet.ChangeDimension{
 		Dimension: packet.DimensionNether,
 		Position:  ray.conn.GameData().PlayerPosition,
+		Respawn:   false,
 	})
+	if err != nil {
+		log.Println("error sending the dimension change request to the player", ray.conn.IdentityData().DisplayName+"\n", err)
+		s.BreakRay(ray)
+		return
+	}
 	//send empty chunk data THX TWISTED IM LAZY lmao.......
 	chunkX := int32(ray.conn.GameData().PlayerPosition.X()) >> 4
 	chunkZ := int32(ray.conn.GameData().PlayerPosition.Z()) >> 4
 	for x := int32(-1); x <= 1; x++ {
 		for z := int32(-1); z <= 1; z++ {
-			_ = ray.conn.WritePacket(&packet.LevelChunk{
+			err = ray.conn.WritePacket(&packet.LevelChunk{
 				ChunkX:        chunkX + x,
 				ChunkZ:        chunkZ + z,
 				SubChunkCount: 0,
 				RawPayload:    emptychunk,
 			})
+			log.Println("error sending chunk to player.", ray.conn.IdentityData().DisplayName+"\n", err)
 		}
 	}
 }
