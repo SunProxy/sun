@@ -149,7 +149,9 @@ func (s *Sun) main() {
 				text.Colourf("<red>You Have been Disconnected!</red>"))
 			continue
 		}
-		ray.remote = &Remote{rconn, s.Hub}
+		ray.remoteMu.Lock()
+		ray.remote = &Remote{conn: rconn, addr: s.Hub}
+		ray.remoteMu.Unlock()
 		s.MakeRay(ray)
 	}
 }
@@ -169,13 +171,13 @@ func (s *Sun) MakeRay(ray *Ray) {
 	var g sync.WaitGroup
 	g.Add(2)
 	go func() {
-		if err := ray.conn.StartGame(ray.remote.conn.GameData()); err != nil {
+		if err := ray.conn.StartGame(ray.Remote().conn.GameData()); err != nil {
 			panic(err)
 		}
 		g.Done()
 	}()
 	go func() {
-		if err := ray.remote.conn.DoSpawn(); err != nil {
+		if err := ray.Remote().conn.DoSpawn(); err != nil {
 			panic(err)
 		}
 		g.Done()
@@ -196,7 +198,7 @@ Closes a players session cleanly with a nice disconnection message!
 */
 func (s *Sun) BreakRay(ray *Ray) {
 	_ = s.Listener.Disconnect(ray.conn, text.Colourf("<red>You Have been Disconnected!</red>"))
-	_ = ray.remote.conn.Close()
+	_ = ray.Remote().conn.Close()
 	delete(s.Rays, ray.conn.IdentityData().Identity)
 }
 
@@ -228,11 +230,11 @@ func (s *Sun) handleRay(ray *Ray) {
 						continue
 					}
 					_ = old.Close()
+					ray.remoteMu.Lock()
 					ray.remote = bufferC
 					ray.bufferConn = nil
-
-					ray.updateTranslatorData(ray.remote.conn.GameData())
-
+					ray.updateTranslatorData(ray.Remote().conn.GameData())
+					ray.remoteMu.Unlock()
 					log.Println("Successfully completed transfer for player ", ray.conn.IdentityData().DisplayName)
 					continue
 				}
@@ -250,7 +252,7 @@ func (s *Sun) handleRay(ray *Ray) {
 					continue
 				}
 			}
-			err = ray.remote.conn.WritePacket(pk)
+			err = ray.Remote().conn.WritePacket(pk)
 			if err != nil {
 				return
 			}
@@ -258,7 +260,7 @@ func (s *Sun) handleRay(ray *Ray) {
 	}()
 	go func() {
 		for {
-			pk, err := ray.remote.conn.ReadPacket()
+			pk, err := ray.Remote().conn.ReadPacket()
 			if err != nil {
 				return
 			}
@@ -341,7 +343,7 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 		s.BreakRay(ray)
 		return
 	}
-	ray.bufferConn = &Remote{conn, addr}
+	ray.bufferConn = &Remote{conn: conn, addr: addr}
 	log.Println("DoSpawned the BufferConn successfully", ray.conn.IdentityData().DisplayName)
 	err = ray.conn.WritePacket(&packet.ChangeDimension{
 		Dimension: packet.DimensionNether,
@@ -382,7 +384,7 @@ func (s *Sun) flushPlayer(ray *Ray) {
 	if err != nil {
 		log.Println(err)
 	}
-	err = ray.remote.conn.Flush()
+	err = ray.Remote().conn.Flush()
 	if err != nil {
 		log.Println(err)
 	}

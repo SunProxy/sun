@@ -38,6 +38,7 @@ package sun
 
 import (
 	"github.com/sandertv/gophertunnel/minecraft"
+	"sync"
 )
 
 type Ray struct {
@@ -46,6 +47,7 @@ type Ray struct {
 	bufferConn   *Remote
 	Translations *TranslatorMappings
 	transferring bool
+	remoteMu     sync.Mutex
 }
 
 type TranslatorMappings struct {
@@ -59,6 +61,8 @@ type TranslatorMappings struct {
 Returns the Remote Connection the player has currently.
 */
 func (r *Ray) Remote() *Remote {
+	r.remoteMu.Lock()
+	defer r.remoteMu.Unlock()
 	return r.remote
 }
 
