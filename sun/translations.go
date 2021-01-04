@@ -188,6 +188,14 @@ func (r *Ray) translateUniqueID(id int64) int64 {
 	return id
 }
 
+func (r *Ray) initTranslators(data minecraft.GameData) {
+	r.Translations = &TranslatorMappings{
+		OriginalEntityRuntimeID: data.EntityRuntimeID,
+		OriginalEntityUniqueID:  data.EntityUniqueID,
+	}
+	r.updateTranslatorData(data)
+}
+
 func (r *Ray) updateTranslatorData(data minecraft.GameData) {
 	if r.Translations == nil {
 		r.Translations = &TranslatorMappings{}

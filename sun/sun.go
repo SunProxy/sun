@@ -164,7 +164,6 @@ func (s *Sun) Start() {
 Adds a player to the sun and readies them
 */
 func (s *Sun) MakeRay(ray *Ray) {
-	s.Rays[ray.conn.IdentityData().Identity] = ray
 	//start the player up
 	var g sync.WaitGroup
 	g.Add(2)
@@ -182,9 +181,11 @@ func (s *Sun) MakeRay(ray *Ray) {
 	}()
 	g.Wait()
 	//start translator
-	ray.updateTranslatorData(ray.conn.GameData())
+	ray.initTranslators(ray.conn.GameData())
 	//Add to player count
 	s.Status.playerc.Add(1)
+	//add to player list
+	s.Rays[ray.conn.IdentityData().Identity] = ray
 	//Start the two listener functions
 	s.handleRay(ray)
 }
@@ -220,21 +221,16 @@ func (s *Sun) handleRay(ray *Ray) {
 					err = ray.conn.WritePacket(&packet.ChangeDimension{
 						Dimension: packet.DimensionOverworld,
 						Position:  pos,
-						Respawn:   false,
 					})
 					if err != nil {
 						log.Println("error changing dimension back to the overworld for transfer for ", ray.conn.IdentityData().DisplayName+"\n", err)
 						continue
 					}
-					err = old.Close()
-					if err != nil {
-						log.Println("error ", ray.conn.IdentityData().DisplayName+"\n", err)
-						continue
-					}
+					_ = old.Close()
 					ray.remote = bufferC
 					ray.bufferConn = nil
 
-					ray.updateTranslatorData(bufferC.conn.GameData())
+					ray.updateTranslatorData(ray.remote.conn.GameData())
 
 					log.Println("Successfully completed transfer for player ", ray.conn.IdentityData().DisplayName)
 					continue
@@ -350,7 +346,6 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 	err = ray.conn.WritePacket(&packet.ChangeDimension{
 		Dimension: packet.DimensionNether,
 		Position:  ray.conn.GameData().PlayerPosition,
-		Respawn:   false,
 	})
 	if err != nil {
 		log.Println("error sending the dimension change request to the player", ray.conn.IdentityData().DisplayName+"\n", err)
