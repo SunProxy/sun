@@ -114,7 +114,7 @@ func LoadJsonConfig() (Config, error) {
 	data, _ := ioutil.ReadFile("config.json")
 	_ = json.Unmarshal(data, &config)
 	config = defaultConfig(config)
-	data, _ = json.Marshal(config)
+	data, _ = json.MarshalIndent(config, "", " ")
 	_ = ioutil.WriteFile("config.json", data, 0644)
 	return config, nil
 }

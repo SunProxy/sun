@@ -233,12 +233,16 @@ func (s *Sun) handleRay(ray *Ray) {
 					}
 					ray.remote = bufferC
 					ray.bufferConn = nil
+
+					ray.UpdateTranslations()
+
 					log.Println("Successfully completed transfer for player ", ray.conn.IdentityData().DisplayName)
 					continue
 				}
 			case *packet.CommandRequest:
 				args := strings.Split(pk.CommandLine, " ")
-				switch args[0] {
+				//skip extra slash becuase im stupid.
+				switch args[0][1:] {
 				case "transfer":
 					ip := args[1]
 					port, _ := strconv.Atoi(args[2])
@@ -315,22 +319,25 @@ Changes a players remote and readies the connection
 func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 	log.Println("Transfer request received for ", ray.conn.IdentityData().DisplayName)
 	if ray.transferring {
-		log.Println("Transfer scrapped because it was already transferring for ", ray.conn.IdentityData().DisplayName)
+		log.Println("Transfer scrapped because it was already transferring for", ray.conn.IdentityData().DisplayName)
 		return
 	}
 	ray.transferring = true
 	//Dial the new server based on the ipaddr
+	idend := ray.conn.IdentityData()
+	//clear the xuid this might be the fix
+	idend.XUID = ""
 	conn, err := minecraft.Dialer{
 		ClientData:   ray.conn.ClientData(),
-		IdentityData: ray.conn.IdentityData()}.Dial("raknet", addr.ToString())
+		IdentityData: idend}.Dial("raknet", addr.ToString())
 	if err != nil {
-		log.Println("error dialing new server for transfer request for ", ray.conn.IdentityData().DisplayName+"\n", err)
+		log.Println("error dialing new server for transfer request for", ray.conn.IdentityData().DisplayName+"\n", err)
 		ray.transferring = false
 		return
 	}
 	//Another twisted copy because fuk im lazy
 	ray.bufferConn = &Remote{conn, addr}
-	log.Println("Transfer bufferConn is now assigned for ", ray.conn.IdentityData().DisplayName)
+	log.Println("Transfer bufferConn is now assigned for", ray.conn.IdentityData().DisplayName)
 	//do spawn
 	err = ray.bufferConn.conn.DoSpawn()
 	if err != nil {
@@ -339,7 +346,7 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 		s.BreakRay(ray)
 		return
 	}
-	log.Println("DoSpawned the BufferConn successfully ", ray.conn.IdentityData().DisplayName)
+	log.Println("DoSpawned the BufferConn successfully", ray.conn.IdentityData().DisplayName)
 	err = ray.conn.WritePacket(&packet.ChangeDimension{
 		Dimension: packet.DimensionNether,
 		Position:  ray.conn.GameData().PlayerPosition,
@@ -361,7 +368,9 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 				SubChunkCount: 0,
 				RawPayload:    emptychunk,
 			})
-			log.Println("error sending chunk to player.", ray.conn.IdentityData().DisplayName+"\n", err)
+			if err != nil {
+				log.Println("error sending chunk to player.", ray.conn.IdentityData().DisplayName+"\n", err)
+			}
 		}
 	}
 }

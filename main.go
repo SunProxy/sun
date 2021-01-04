@@ -38,7 +38,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/sun_proxy/sun/sun"
+	"github.com/sunproxy/sun/sun"
 	"log"
 )
 

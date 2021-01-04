@@ -83,16 +83,16 @@ func (r *Ray) TranslateEntityRuntimeID(entityRuntimeID uint64) uint64 {
 Updates the TranslatorMappings for the said Player
 */
 func (r *Ray) UpdateTranslations() {
-	r.Translations.CurrentEntityRuntimeID = r.conn.GameData().EntityRuntimeID
-	r.Translations.CurrentEntityUniqueID = r.conn.GameData().EntityUniqueID
+	r.Translations.CurrentEntityRuntimeID = r.remote.conn.GameData().EntityRuntimeID
+	r.Translations.CurrentEntityUniqueID = r.remote.conn.GameData().EntityUniqueID
 }
 
 /*
 Should only be called when the player is first joined / added
 */
 func (r *Ray) InitTranslations() {
-	r.Translations = &TranslatorMappings{OriginalEntityUniqueID: r.conn.GameData().EntityUniqueID,
-		OriginalEntityRuntimeID: r.conn.GameData().EntityRuntimeID}
+	r.Translations = &TranslatorMappings{OriginalEntityUniqueID: r.remote.conn.GameData().EntityUniqueID,
+		OriginalEntityRuntimeID: r.remote.conn.GameData().EntityRuntimeID}
 	//safe as p.Translations is no longer nil and should still have the same data which is correct
 	r.UpdateTranslations()
 }

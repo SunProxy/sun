@@ -32,7 +32,7 @@
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //SOFTWARE.
 
-module github.com/sun_proxy/sun
+module github.com/sunproxy/sun
 
 go 1.14
 
