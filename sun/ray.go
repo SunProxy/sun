@@ -55,48 +55,6 @@ type TranslatorMappings struct {
 	CurrentEntityUniqueID   int64
 }
 
-/*
-Translates the entityUniqueID from a given packet to fix mix matched IDs
-*/
-func (r *Ray) TranslateEntityUniqueID(entityUniqueID int64) int64 {
-	if entityUniqueID == r.Translations.OriginalEntityUniqueID {
-		return r.Translations.CurrentEntityUniqueID
-	} else if entityUniqueID == r.Translations.CurrentEntityUniqueID {
-		return r.Translations.OriginalEntityUniqueID
-	}
-	return entityUniqueID
-}
-
-/*
-Translates the entityRuntimeID from a given packet to fix mix matched IDs
-*/
-func (r *Ray) TranslateEntityRuntimeID(entityRuntimeID uint64) uint64 {
-	if entityRuntimeID == r.Translations.OriginalEntityRuntimeID {
-		return r.Translations.CurrentEntityRuntimeID
-	} else if entityRuntimeID == r.Translations.CurrentEntityRuntimeID {
-		return r.Translations.OriginalEntityRuntimeID
-	}
-	return entityRuntimeID
-}
-
-/*
-Updates the TranslatorMappings for the said Player
-*/
-func (r *Ray) UpdateTranslations() {
-	r.Translations.CurrentEntityRuntimeID = r.remote.conn.GameData().EntityRuntimeID
-	r.Translations.CurrentEntityUniqueID = r.remote.conn.GameData().EntityUniqueID
-}
-
-/*
-Should only be called when the player is first joined / added
-*/
-func (r *Ray) InitTranslations() {
-	r.Translations = &TranslatorMappings{OriginalEntityUniqueID: r.remote.conn.GameData().EntityUniqueID,
-		OriginalEntityRuntimeID: r.remote.conn.GameData().EntityRuntimeID}
-	//safe as p.Translations is no longer nil and should still have the same data which is correct
-	r.UpdateTranslations()
-}
-
 /**
 Returns the Remote Connection the player has currently.
 */

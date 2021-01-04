@@ -182,7 +182,7 @@ func (s *Sun) MakeRay(ray *Ray) {
 	}()
 	g.Wait()
 	//start translator
-	ray.InitTranslations()
+	ray.updateTranslatorData(ray.conn.GameData())
 	//Add to player count
 	s.Status.playerc.Add(1)
 	//Start the two listener functions
@@ -205,7 +205,7 @@ func (s *Sun) handleRay(ray *Ray) {
 			if err != nil {
 				return
 			}
-			TranslateClientEntityRuntimeIds(ray, pk)
+			ray.translatePacket(pk)
 			switch pk := pk.(type) {
 			case *packet.PlayerAction:
 				//hehehehehehehehehehehehehehehehehehehehehehehe thx
@@ -234,7 +234,7 @@ func (s *Sun) handleRay(ray *Ray) {
 					ray.remote = bufferC
 					ray.bufferConn = nil
 
-					ray.UpdateTranslations()
+					ray.updateTranslatorData(bufferC.conn.GameData())
 
 					log.Println("Successfully completed transfer for player ", ray.conn.IdentityData().DisplayName)
 					continue
@@ -265,7 +265,7 @@ func (s *Sun) handleRay(ray *Ray) {
 			if err != nil {
 				return
 			}
-			TranslateServerEntityRuntimeIds(ray, pk)
+			ray.translatePacket(pk)
 			if pk, ok := pk.(*packet.AvailableCommands); ok {
 				pk.Commands = append(pk.Commands, protocol.Command{
 					Name: "transfer", Description: "Utilizes Sun Proxy's Fast Transfer!"})
