@@ -48,6 +48,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 var emptychunk = make([]byte, 257)
@@ -331,17 +332,16 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 		ray.transferring = false
 		return
 	}
-	//Another twisted copy because fuk im lazy
-	ray.bufferConn = &Remote{conn, addr}
 	log.Println("Transfer bufferConn is now assigned for", ray.conn.IdentityData().DisplayName)
 	//do spawn
-	err = ray.bufferConn.conn.DoSpawn()
+	err = conn.DoSpawnTimeout(time.Minute)
 	if err != nil {
 		log.Println("error do spawning the new server for transfer request for ", ray.conn.IdentityData().DisplayName+"\n", err)
 		//cleanly close player
 		s.BreakRay(ray)
 		return
 	}
+	ray.bufferConn = &Remote{conn, addr}
 	log.Println("DoSpawned the BufferConn successfully", ray.conn.IdentityData().DisplayName)
 	err = ray.conn.WritePacket(&packet.ChangeDimension{
 		Dimension: packet.DimensionNether,
@@ -352,22 +352,26 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 		s.BreakRay(ray)
 		return
 	}
+	_ = ray.conn.WritePacket(&packet.NetworkChunkPublisherUpdate{
+		Position: protocol.BlockPos{int32(ray.conn.GameData().PlayerPosition.X()),
+			int32(ray.conn.GameData().PlayerPosition.Y()),
+			int32(ray.conn.GameData().PlayerPosition.Z())},
+		Radius: 6 >> 4,
+	})
 	//send empty chunk data THX TWISTED IM LAZY lmao.......
 	chunkX := int32(ray.conn.GameData().PlayerPosition.X()) >> 4
 	chunkZ := int32(ray.conn.GameData().PlayerPosition.Z()) >> 4
 	for x := int32(-1); x <= 1; x++ {
 		for z := int32(-1); z <= 1; z++ {
-			err = ray.conn.WritePacket(&packet.LevelChunk{
+			_ = ray.conn.WritePacket(&packet.LevelChunk{
 				ChunkX:        chunkX + x,
 				ChunkZ:        chunkZ + z,
 				SubChunkCount: 0,
 				RawPayload:    emptychunk,
 			})
-			if err != nil {
-				log.Println("error sending chunk to player.", ray.conn.IdentityData().DisplayName+"\n", err)
-			}
 		}
 	}
+
 }
 
 /*
