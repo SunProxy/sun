@@ -212,7 +212,6 @@ func (s *Sun) handleRay(ray *Ray) {
 			ray.translatePacket(pk)
 			switch pk := pk.(type) {
 			case *packet.PlayerAction:
-				//hehehehehehehehehehehehehehehehehehehehehehehe thx
 				if pk.ActionType == packet.PlayerActionDimensionChangeDone && ray.Transferring() {
 					log.Println("Received Dimension done with the player transferring for ", ray.conn.IdentityData().DisplayName)
 					ray.transferring = false
@@ -230,7 +229,15 @@ func (s *Sun) handleRay(ray *Ray) {
 						continue
 					}
 					_ = old.Close()
-					log.Println("New Player Position after transfer: ", ray.conn.GameData().PlayerPosition)
+					//do spawn
+					err = bufferC.conn.DoSpawnTimeout(time.Minute)
+					if err != nil {
+						log.Println("error do spawning the new server for transfer request for ", ray.conn.IdentityData().DisplayName+"\n", err)
+						//cleanly close player
+						s.BreakRay(ray)
+						return
+					}
+					log.Println("New Player Position after transfer:", ray.conn.GameData().PlayerPosition)
 					ray.remoteMu.Lock()
 					ray.remote = bufferC
 					ray.bufferConn = nil
@@ -340,14 +347,6 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 		return
 	}
 	log.Println("Transfer bufferConn is now assigned for", ray.conn.IdentityData().DisplayName)
-	//do spawn
-	err = conn.DoSpawnTimeout(time.Minute)
-	if err != nil {
-		log.Println("error do spawning the new server for transfer request for ", ray.conn.IdentityData().DisplayName+"\n", err)
-		//cleanly close player
-		s.BreakRay(ray)
-		return
-	}
 	ray.bufferConn = &Remote{conn: conn, addr: addr}
 	log.Println("DoSpawned the BufferConn successfully", ray.conn.IdentityData().DisplayName)
 	err = ray.conn.WritePacket(&packet.ChangeDimension{
@@ -378,7 +377,6 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 			})
 		}
 	}
-
 }
 
 /*
