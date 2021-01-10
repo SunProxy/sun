@@ -38,7 +38,14 @@ package sun
 
 import (
 	"github.com/sandertv/gophertunnel/minecraft"
+	"github.com/sandertv/gophertunnel/minecraft/protocol"
+	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
+	"github.com/sandertv/gophertunnel/minecraft/text"
+	"log"
+	"strconv"
+	"strings"
 	"sync"
+	"time"
 )
 
 type Ray struct {
@@ -78,4 +85,152 @@ BufferConn is the connection used to temp out new conns also named temp conn
 */
 func (r *Ray) BufferConn() *Remote {
 	return r.bufferConn
+}
+
+func (s *Sun) handleRay(ray *Ray) {
+	go func() {
+		for {
+			pk, err := ray.conn.ReadPacket()
+			if err != nil {
+				return
+			}
+			ray.translatePacket(pk)
+			switch pk := pk.(type) {
+			case *packet.PlayerAction:
+				if pk.ActionType == packet.PlayerActionDimensionChangeDone && ray.Transferring() {
+					ray.transferring = false
+
+					old := ray.Remote().conn
+					bufferC := ray.bufferConn
+
+					pos := bufferC.conn.GameData().PlayerPosition
+					err = ray.conn.WritePacket(&packet.ChangeDimension{
+						Dimension: packet.DimensionOverworld,
+						Position:  pos,
+					})
+					if err != nil {
+						continue
+					}
+					_ = old.Close()
+					ray.remoteMu.Lock()
+					ray.remote = bufferC
+					ray.bufferConn = nil
+					ray.updateTranslatorData(ray.remote.conn.GameData())
+					ray.remoteMu.Unlock()
+					log.Println("Successfully completed transfer for player ", ray.conn.IdentityData().DisplayName)
+					continue
+				}
+			case *packet.CommandRequest:
+				args := strings.Split(pk.CommandLine, " ")
+				//skip extra slash becuase im stupid.
+				switch args[0][1:] {
+				case "transfer":
+					ip := args[1]
+					port, _ := strconv.Atoi(args[2])
+					_ = ray.conn.WritePacket(&packet.Text{
+						Message:  text.Colourf("<yellow>Starting Transfer To %s</yellow>", ip),
+						TextType: packet.TextTypeRaw})
+					s.TransferRay(ray, IpAddr{Address: ip, Port: uint16(port)})
+					continue
+				}
+			}
+			err = ray.Remote().conn.WritePacket(pk)
+			if err != nil {
+				return
+			}
+		}
+	}()
+	go func() {
+		for {
+			pk, err := ray.Remote().conn.ReadPacket()
+			if err != nil {
+				continue
+			}
+			ray.translatePacket(pk)
+			if pk, ok := pk.(*packet.AvailableCommands); ok {
+				pk.Commands = append(pk.Commands, protocol.Command{
+					Name: "transfer", Description: "Utilizes Sun Proxy's Fast Transfer!"})
+			}
+			if pk, ok := pk.(*Transfer); ok {
+				s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
+				continue
+			}
+			if pk, ok := pk.(*Text); ok {
+				//Only iterate if we have to.
+				if len(pk.Servers) > 0 {
+					//in a new routine because of the iteration
+					go s.SendMessageToServers(pk.Message, pk.Servers)
+					continue
+				}
+				//if len(pk.Servers) == 0
+				s.SendMessage(pk.Message)
+				continue
+			}
+			err = ray.conn.WritePacket(pk)
+			if err != nil {
+				return
+			}
+		}
+	}()
+}
+
+/*
+Changes a players remote and readies the connection
+*/
+func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
+	log.Println("Transfer request received for ", ray.conn.IdentityData().DisplayName)
+	if ray.transferring {
+		log.Println("Transfer scrapped because it was already transferring for", ray.conn.IdentityData().DisplayName)
+		return
+	}
+	ray.transferring = true
+	//Dial the new server based on the ipaddr
+	idend := ray.conn.IdentityData()
+	//clear the xuid this might be the fix
+	idend.XUID = ""
+	conn, err := minecraft.Dialer{
+		ClientData:   ray.conn.ClientData(),
+		IdentityData: idend}.Dial("raknet", addr.ToString())
+	if err != nil {
+		log.Println("error dialing new server for transfer request for", ray.conn.IdentityData().DisplayName+"\n", err)
+		ray.transferring = false
+		return
+	}
+	ray.bufferConn = &Remote{conn: conn, addr: addr}
+	//do spawn
+	err = ray.BufferConn().conn.DoSpawnTimeout(time.Minute)
+	if err != nil {
+		//cleanly close player
+		s.BreakRay(ray)
+		return
+	}
+	err = ray.conn.WritePacket(&packet.ChangeDimension{
+		Dimension: packet.DimensionNether,
+		Position:  ray.conn.GameData().PlayerPosition,
+	})
+	if err != nil {
+		log.Println("error sending the dimension change request to the player", ray.conn.IdentityData().DisplayName+"\n", err)
+		s.BreakRay(ray)
+		return
+	}
+	//Update Chunk Radius for players.
+	_ = ray.conn.WritePacket(&packet.NetworkChunkPublisherUpdate{
+		Position: protocol.BlockPos{int32(ray.conn.GameData().PlayerPosition.X()),
+			int32(ray.conn.GameData().PlayerPosition.Y()),
+			int32(ray.conn.GameData().PlayerPosition.Z())},
+		Radius: 12 >> 4,
+	})
+	//send empty chunk data.
+	chunkX := int32(ray.conn.GameData().PlayerPosition.X()) >> 4
+	chunkZ := int32(ray.conn.GameData().PlayerPosition.Z()) >> 4
+	for x := int32(-1); x <= 1; x++ {
+		for z := int32(-1); z <= 1; z++ {
+			_ = ray.conn.WritePacket(&packet.LevelChunk{
+				ChunkX:        chunkX + x,
+				ChunkZ:        chunkZ + z,
+				SubChunkCount: 0,
+				RawPayload:    emptychunk,
+			})
+		}
+	}
 }

@@ -44,3 +44,7 @@ func NewPlanet(ip IpAddr) (Planet, error) {
 	}
 	return Planet{conn: conn}, nil
 }
+
+func (s *Sun) handlePlanet(planet *Planet) {
+
+}
