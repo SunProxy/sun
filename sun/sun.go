@@ -207,7 +207,7 @@ func (s *Sun) handleRay(ray *Ray) {
 		for {
 			pk, err := ray.conn.ReadPacket()
 			if err != nil {
-				return
+				continue
 			}
 			ray.translatePacket(pk)
 			switch pk := pk.(type) {
@@ -263,7 +263,7 @@ func (s *Sun) handleRay(ray *Ray) {
 			}
 			err = ray.Remote().conn.WritePacket(pk)
 			if err != nil {
-				return
+				continue
 			}
 		}
 	}()
@@ -271,7 +271,7 @@ func (s *Sun) handleRay(ray *Ray) {
 		for {
 			pk, err := ray.Remote().conn.ReadPacket()
 			if err != nil {
-				return
+				continue
 			}
 			ray.translatePacket(pk)
 			if pk, ok := pk.(*packet.AvailableCommands); ok {
@@ -298,7 +298,7 @@ func (s *Sun) handleRay(ray *Ray) {
 			}
 			err = ray.conn.WritePacket(pk)
 			if err != nil {
-				return
+				continue
 			}
 		}
 	}()
