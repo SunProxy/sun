@@ -38,6 +38,7 @@ package sun
 
 import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
+	"io"
 )
 
 //Transfer is sent by the server to change a Players remote connection otherwise known as the fast transfer packet
@@ -85,4 +86,35 @@ func (pk *PlanetTransfer) Unmarshal(r *protocol.Reader) {
 	r.String(&pk.Address)
 	r.Uint16(&pk.Port)
 	r.String(&pk.User)
+}
+
+const (
+	TransferResponseSuccess = iota
+	TransferResponseRemoteNotFound
+	TransferResponseRemoteRejection
+)
+
+type TransferResponse struct {
+	//Type is the said given type of response that we return
+	Type byte
+	//Message is a given message sent back with the response
+	Message string
+}
+
+func (t *TransferResponse) parse(reader io.Reader) error {
+	panic("implement me")
+}
+
+func (t *TransferResponse) ID() uint32 {
+	return IDPlanetTransferResponse
+}
+
+func (t *TransferResponse) Marshal(w *protocol.Writer) {
+	w.Uint8(&t.Type)
+	w.String(&t.Message)
+}
+
+func (t *TransferResponse) Unmarshal(r *protocol.Reader) {
+	r.Uint8(&t.Type)
+	r.String(&t.Message)
 }

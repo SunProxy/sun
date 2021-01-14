@@ -42,10 +42,10 @@ import (
 )
 
 type Planet struct {
-	buf bytes.Buffer
+	buf  bytes.Buffer
 	pool packet.Pool
 	conn net.Conn
-	id uuid.UUID
+	id   uuid.UUID
 }
 
 func NewPlanet(ip IpAddr) (*Planet, error) {
@@ -99,7 +99,11 @@ func (s *Sun) handlePlanet(planet *Planet) {
 			}
 			if pk, ok := pk.(*PlanetTransfer); ok {
 				if ray, ok := s.Rays[pk.User]; ok {
-					s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
+					err := s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
+					if err != nil {
+
+					}
+					_ = planet.WritePacket(&TransferResponse{Type: TransferResponseSuccess, Message: "Transfer successful!"})
 				} else {
 					log.Printf("Received bad request from planet: %s, the player by uuid %s was not found!\n", planet.conn.RemoteAddr(), pk.User)
 				}
@@ -119,4 +123,3 @@ func (s *Sun) handlePlanet(planet *Planet) {
 		}
 	}()
 }
-

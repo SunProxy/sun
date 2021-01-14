@@ -37,6 +37,7 @@ SOFTWARE.
 package sun
 
 import (
+	"fmt"
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
@@ -157,11 +158,11 @@ func (s *Sun) handleRay(ray *Ray) {
 /*
 Changes a players remote and readies the connection
 */
-func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
+func (s *Sun) TransferRay(ray *Ray, addr IpAddr) error {
 	log.Println("Transfer request received for ", ray.conn.IdentityData().DisplayName)
 	if ray.transferring {
 		log.Println("Transfer scrapped because it was already transferring for", ray.conn.IdentityData().DisplayName)
-		return
+		return fmt.Errorf("transfer scrapped because it was already transferring for %s", ray.conn.IdentityData().DisplayName)
 	}
 	ray.transferring = true
 	//Dial the new server based on the ipaddr
@@ -172,35 +173,28 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 		ClientData:   ray.conn.ClientData(),
 		IdentityData: idend}.Dial("raknet", addr.ToString())
 	if err != nil {
-		log.Println("error dialing new server for transfer request for", ray.conn.IdentityData().DisplayName+"\n", err)
 		ray.transferring = false
-		return
+		return err
 	}
 	ray.bufferConn = &Remote{conn: conn, addr: addr}
 	//do spawn
 	err = ray.BufferConn().conn.DoSpawnTimeout(time.Minute)
 	if err != nil {
-		//cleanly close player
-		s.BreakRay(ray)
-		return
+		return err
 	}
 	err = ray.conn.WritePacket(&packet.SetScoreboardIdentity{
 		ActionType: packet.ScoreboardIdentityActionClear,
 		Entries:    nil,
 	})
 	if err != nil {
-		log.Println("error clearing scoreboard for player", ray.conn.IdentityData().DisplayName+"\n", err)
-		s.BreakRay(ray)
-		return
+		return err
 	}
 	err = ray.conn.WritePacket(&packet.ChangeDimension{
 		Dimension: packet.DimensionNether,
 		Position:  ray.conn.GameData().PlayerPosition,
 	})
 	if err != nil {
-		log.Println("error sending the dimension change request to the player", ray.conn.IdentityData().DisplayName+"\n", err)
-		s.BreakRay(ray)
-		return
+		return err
 	}
 	//Update Chunk Radius for players.
 	_ = ray.conn.WritePacket(&packet.NetworkChunkPublisherUpdate{
@@ -214,12 +208,16 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 	chunkZ := int32(ray.conn.GameData().PlayerPosition.Z()) >> 4
 	for x := int32(-1); x <= 1; x++ {
 		for z := int32(-1); z <= 1; z++ {
-			_ = ray.conn.WritePacket(&packet.LevelChunk{
+			err = ray.conn.WritePacket(&packet.LevelChunk{
 				ChunkX:        chunkX + x,
 				ChunkZ:        chunkZ + z,
 				SubChunkCount: 0,
 				RawPayload:    emptychunk,
 			})
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return err
 }

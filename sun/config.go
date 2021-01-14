@@ -172,12 +172,6 @@ func defaultConfig(config Config) Config {
 	}
 	//Generate a random Key if its empty
 	if config.Tcp.Key == "" {
-		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
-		Chars := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-		var key = make([]rune, 10)
-		for i := range key {
-			key[i] = rune(Chars[rnd.Intn(len(Chars))])
-		}
 		config.Tcp.Key = GenKey()
 	}
 	return config
