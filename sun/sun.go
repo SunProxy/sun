@@ -85,6 +85,7 @@ func NewSunW(config Config) (*Sun, error) {
 	listener, err := minecraft.ListenConfig{
 		AuthenticationDisabled: !config.Proxy.XboxAuthentication,
 		StatusProvider:         status,
+		ResourcePacks:          LoadResourcePacks("./resource_packs/"),
 	}.Listen("raknet", fmt.Sprint(":", config.Proxy.Port))
 	if err != nil {
 		return nil, err

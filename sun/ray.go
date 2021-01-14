@@ -40,10 +40,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
-	"github.com/sandertv/gophertunnel/minecraft/text"
 	"log"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -120,19 +117,6 @@ func (s *Sun) handleRay(ray *Ray) {
 					log.Println("Successfully completed transfer for player ", ray.conn.IdentityData().DisplayName)
 					continue
 				}
-			case *packet.CommandRequest:
-				args := strings.Split(pk.CommandLine, " ")
-				//skip extra slash becuase im stupid.
-				switch args[0][1:] {
-				case "transfer":
-					ip := args[1]
-					port, _ := strconv.Atoi(args[2])
-					_ = ray.conn.WritePacket(&packet.Text{
-						Message:  text.Colourf("<yellow>Starting Transfer To %s</yellow>", ip),
-						TextType: packet.TextTypeRaw})
-					s.TransferRay(ray, IpAddr{Address: ip, Port: uint16(port)})
-					continue
-				}
 			}
 			err = ray.Remote().conn.WritePacket(pk)
 			if err != nil {
@@ -147,10 +131,6 @@ func (s *Sun) handleRay(ray *Ray) {
 				continue
 			}
 			ray.translatePacket(pk)
-			if pk, ok := pk.(*packet.AvailableCommands); ok {
-				pk.Commands = append(pk.Commands, protocol.Command{
-					Name: "transfer", Description: "Utilizes Sun Proxy's Fast Transfer!"})
-			}
 			if pk, ok := pk.(*Transfer); ok {
 				s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
 				continue
