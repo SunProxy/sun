@@ -204,6 +204,15 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) {
 		s.BreakRay(ray)
 		return
 	}
+	err = ray.conn.WritePacket(&packet.SetScoreboardIdentity{
+		ActionType: packet.ScoreboardIdentityActionClear,
+		Entries:    nil,
+	})
+	if err != nil {
+		log.Println("error clearing scoreboard for player", ray.conn.IdentityData().DisplayName+"\n", err)
+		s.BreakRay(ray)
+		return
+	}
 	err = ray.conn.WritePacket(&packet.ChangeDimension{
 		Dimension: packet.DimensionNether,
 		Position:  ray.conn.GameData().PlayerPosition,

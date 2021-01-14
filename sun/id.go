@@ -40,7 +40,15 @@ package sun
 The RakNet connection or rather mcpe packet ids
 */
 const (
-	IDSunTransfer = iota + 0xFA
-	IDSunText
-	IDIpForward
+	IDRayTransfer = iota + 0xFA
+	IDRayText
+)
+
+const (
+	IDPlanetAuth = iota
+	IDPlanetDisconnect
+	IDPlanetTransfer
+	IDPlanetTransferResponse
+	IDPlanetText
+	IDPlanetTextResponse
 )

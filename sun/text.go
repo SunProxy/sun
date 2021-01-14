@@ -54,7 +54,7 @@ type Text struct {
 }
 
 func (pk *Text) ID() uint32 {
-	return IDSunText
+	return IDRayText
 }
 
 func (pk *Text) Marshal(w *protocol.Writer) {

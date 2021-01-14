@@ -48,16 +48,41 @@ type Transfer struct {
 	Port uint16
 }
 
-func (pk Transfer) ID() uint32 {
-	return IDSunTransfer
+func (pk *Transfer) ID() uint32 {
+	return IDRayTransfer
 }
 
-func (pk Transfer) Marshal(w *protocol.Writer) {
+func (pk *Transfer) Marshal(w *protocol.Writer) {
 	w.String(&pk.Address)
 	w.Uint16(&pk.Port)
 }
 
-func (pk Transfer) Unmarshal(r *protocol.Reader) {
+func (pk *Transfer) Unmarshal(r *protocol.Reader) {
 	r.String(&pk.Address)
 	r.Uint16(&pk.Port)
+}
+
+type PlanetTransfer struct {
+	// Address is the address of the new server, which might be either a hostname or an actual IP address.
+	Address string
+	// Port is the UDP port of the new server.
+	Port uint16
+	//User is the uuid of the given player to transfer
+	User string
+}
+
+func (pk *PlanetTransfer) ID() uint32 {
+	return IDPlanetTransfer
+}
+
+func (pk *PlanetTransfer) Marshal(w *protocol.Writer) {
+	w.String(&pk.Address)
+	w.Uint16(&pk.Port)
+	w.String(&pk.User)
+}
+
+func (pk *PlanetTransfer) Unmarshal(r *protocol.Reader) {
+	r.String(&pk.Address)
+	r.Uint16(&pk.Port)
+	r.String(&pk.User)
 }

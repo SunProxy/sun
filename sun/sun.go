@@ -38,6 +38,7 @@ package sun
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
@@ -45,6 +46,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 )
 
 var emptychunk = make([]byte, 257)
@@ -53,9 +55,12 @@ type Sun struct {
 	Listener  *minecraft.Listener
 	Rays      map[string]*Ray
 	Hub       IpAddr
-	Planets   []*Planet
+	Planets   map[uuid.UUID]*Planet
 	PListener net.Listener
 	Status    StatusProvider
+	Key string
+	PWarnings map[string]int
+	PCooldowns map[string]time.Time
 }
 
 type StatusProvider struct {
@@ -84,23 +89,33 @@ func NewSunW(config Config) (*Sun, error) {
 	if err != nil {
 		return nil, err
 	}
-	//hehehehehehe
-	plistener, err := net.Listen("tcp", ":42069")
-	if err != nil {
-		return nil, err
+	if config.Tcp.Enabled {
+		plistener, err := net.Listen("tcp", ":42069")
+		if err != nil {
+			return nil, err
+		}
+		registerPackets()
+		return &Sun{Listener: listener,
+			PListener: plistener,
+			PCooldowns: make(map[string]time.Time),
+			PWarnings: make(map[string]int),
+			Status:    status,
+			Rays: make(map[string]*Ray,
+				config.Status.MaxPlayers),
+			Hub: config.Hub, Planets: make(map[uuid.UUID]*Planet),
+			Key: config.Tcp.Key}, nil
 	}
 	registerPackets()
 	return &Sun{Listener: listener,
-		PListener: plistener,
 		Status:    status,
 		Rays: make(map[string]*Ray,
 			config.Status.MaxPlayers),
-		Hub: config.Hub, Planets: make([]*Planet, 0)}, nil
+		Hub: config.Hub, Planets: make(map[uuid.UUID]*Planet)}, nil
 }
 
 func registerPackets() {
-	packet.Register(IDSunTransfer, func() packet.Packet { return &Transfer{} })
-	packet.Register(IDSunText, func() packet.Packet { return &Text{} })
+	packet.Register(IDRayTransfer, func() packet.Packet { return &Transfer{} })
+	packet.Register(IDRayText, func() packet.Packet { return &Text{} })
 }
 
 /*
@@ -116,18 +131,45 @@ func NewSun() (*Sun, error) {
 
 func (s *Sun) main() {
 	defer s.Listener.Close()
-	go func() {
-		for {
-			conn, err := s.PListener.Accept()
-			if err != nil {
-				log.Println(err)
+	if s.PListener != nil {
+		go func() {
+			for {
+				conn, err := s.PListener.Accept()
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				pl := &Planet{conn: conn}
+				if tl, ok := s.PCooldowns[pl.conn.RemoteAddr().String()]; ok {
+					if time.Now().Before(tl) {
+						_ = pl.WritePacket(&PlanetDisconnect{Message: fmt.Sprintf("You are on cooldown for %v seconds!", time.Now().Sub(s.PCooldowns[pl.conn.RemoteAddr().String()]).Seconds())})
+						_ = pl.conn.Close()
+						continue
+					}
+					delete(s.PCooldowns, conn.RemoteAddr().String())
+				}
+				pk, err := pl.ReadPacket()
+				if pk, ok := pk.(*PlanetAuth); ok {
+					if pk.Key == s.Key {
+						s.AddPlanet(pl)
+						continue
+					}
+				}
+				if _, ok := s.PWarnings[pl.conn.RemoteAddr().String()]; !ok {
+					s.PWarnings[pl.conn.RemoteAddr().String()] = 3
+				}
+				s.PWarnings[pl.conn.RemoteAddr().String()]--
+				if s.PWarnings[pl.conn.RemoteAddr().String()] <= 0 {
+					s.PWarnings[pl.conn.RemoteAddr().String()] = 3
+					s.PCooldowns[pl.conn.RemoteAddr().String()] = time.Now().Add(300 * time.Second)
+					_ = pl.WritePacket(&PlanetDisconnect{Message: fmt.Sprintf("You are on cooldown for %v seconds!", time.Now().Sub(s.PCooldowns[pl.conn.RemoteAddr().String()]).Seconds())})
+					_ = pl.conn.Close()
+				}
+				_ = pl.WritePacket(&PlanetDisconnect{Message: fmt.Sprintf("Invalid Authorization Key Provided %v Tries Remain Until A 300 Second Cooldown!", s.PWarnings[pl.conn.RemoteAddr().String()])})
 				continue
 			}
-			//TODO: Implement Ids for Planets
-			pl := &Planet{conn: conn}
-			s.AddPlanet(pl)
-		}
-	}()
+		}()
+	}
 	for {
 		//Listener won't be closed unless it is manually done
 		conn, err := s.Listener.Accept()
@@ -220,5 +262,8 @@ func (s *Sun) SendMessage(Message string) {
 }
 
 func (s *Sun) AddPlanet(planet *Planet) {
-
+	id := uuid.New()
+	planet.id = id
+	s.Planets[id] = planet
+	s.handlePlanet(planet)
 }
