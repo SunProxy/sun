@@ -65,6 +65,12 @@ type Config struct {
 		XboxAuthentication bool
 
 		IpForwarding bool
+
+		TransferCommand struct {
+			Enabled bool
+
+			Servers map[string]IpAddr
+		}
 	}
 
 	Tcp struct {
@@ -173,6 +179,10 @@ func defaultConfig(config Config) Config {
 	//Generate a random Key if its empty
 	if config.Tcp.Key == "" {
 		config.Tcp.Key = GenKey()
+	}
+	if config.Proxy.TransferCommand.Servers == nil {
+		config.Proxy.TransferCommand.Servers = make(map[string]IpAddr)
+		config.Proxy.TransferCommand.Servers["example"] = IpAddr{Address: "127.0.0.1", Port: 19134}
 	}
 	return config
 }

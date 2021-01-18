@@ -52,15 +52,17 @@ import (
 var emptychunk = make([]byte, 257)
 
 type Sun struct {
-	Listener  *minecraft.Listener
-	Rays      map[string]*Ray
-	Hub       IpAddr
-	Planets   map[uuid.UUID]*Planet
-	PListener net.Listener
-	Status    StatusProvider
-	Key string
-	PWarnings map[string]int
-	PCooldowns map[string]time.Time
+	Listener        *minecraft.Listener
+	Rays            map[string]*Ray
+	Hub             IpAddr
+	Planets         map[uuid.UUID]*Planet
+	PListener       net.Listener
+	Status          StatusProvider
+	Key             string
+	PWarnings       map[string]int
+	PCooldowns      map[string]time.Time
+	Servers         map[string]IpAddr
+	TransferCommand bool
 }
 
 type StatusProvider struct {
@@ -97,21 +99,26 @@ func NewSunW(config Config) (*Sun, error) {
 		}
 		registerPackets()
 		return &Sun{Listener: listener,
-			PListener: plistener,
+			PListener:  plistener,
 			PCooldowns: make(map[string]time.Time),
-			PWarnings: make(map[string]int),
-			Status:    status,
+			PWarnings:  make(map[string]int),
+			Status:     status,
 			Rays: make(map[string]*Ray,
 				config.Status.MaxPlayers),
 			Hub: config.Hub, Planets: make(map[uuid.UUID]*Planet),
-			Key: config.Tcp.Key}, nil
+			Key:             config.Tcp.Key,
+			TransferCommand: config.Proxy.TransferCommand.Enabled,
+			Servers:         config.Proxy.TransferCommand.Servers,
+		}, nil
 	}
 	registerPackets()
 	return &Sun{Listener: listener,
-		Status:    status,
+		Status: status,
 		Rays: make(map[string]*Ray,
 			config.Status.MaxPlayers),
-		Hub: config.Hub, Planets: make(map[uuid.UUID]*Planet)}, nil
+		Hub: config.Hub, Planets: make(map[uuid.UUID]*Planet),
+		TransferCommand: config.Proxy.TransferCommand.Enabled,
+		Servers:         config.Proxy.TransferCommand.Servers}, nil
 }
 
 func registerPackets() {

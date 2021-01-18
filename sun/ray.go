@@ -41,7 +41,9 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
+	"github.com/sandertv/gophertunnel/minecraft/text"
 	"log"
+	"strings"
 	"sync"
 	"time"
 )
@@ -94,6 +96,39 @@ func (s *Sun) handleRay(ray *Ray) {
 			}
 			ray.translatePacket(pk)
 			switch pk := pk.(type) {
+			case *packet.CommandRequest:
+				if s.TransferCommand {
+					args := strings.Split(pk.CommandLine, " ")
+					switch args[0][1:] {
+					case "transfer":
+						if len(args) > 1 {
+							server := args[1]
+							if ip, ok := s.Servers[server]; ok {
+								_ = ray.conn.WritePacket(&packet.Text{
+									Message: text.Colourf("<yellow>You Are Being Transferred To Server %s</yellow>",
+										server),
+									TextType: packet.TextTypeRaw})
+								err := s.TransferRay(ray, ip)
+								if err != nil {
+									_ = ray.conn.WritePacket(&packet.Text{
+										Message:  text.Colourf("<red>An Occurred During Your Transfer Request!</red>"),
+										TextType: packet.TextTypeRaw})
+									continue
+								}
+							} else {
+								_ = ray.conn.WritePacket(&packet.Text{
+									Message: text.Colourf("<red>Server %s Was Not Found In The Config.yml!</red>",
+										server),
+									TextType: packet.TextTypeRaw})
+								continue
+							}
+						}
+						_ = ray.conn.WritePacket(&packet.Text{
+							Message:  text.Colourf("<red>Please Provide a Server To Be Transferred To!</red>"),
+							TextType: packet.TextTypeRaw})
+						continue
+					}
+				}
 			case *packet.PlayerAction:
 				if pk.ActionType == packet.PlayerActionDimensionChangeDone && ray.Transferring() {
 					ray.transferring = false
@@ -132,6 +167,31 @@ func (s *Sun) handleRay(ray *Ray) {
 				continue
 			}
 			ray.translatePacket(pk)
+			if pk, ok := pk.(*packet.AvailableCommands); ok && s.TransferCommand {
+				var servers []string
+				var overloads []protocol.CommandOverload
+				for name := range s.Servers {
+					servers = append(servers, name)
+				}
+				overloads = append(overloads, protocol.CommandOverload{
+					Parameters: []protocol.CommandParameter{
+						{Name: "server",
+							Type: protocol.CommandArgEnum | protocol.CommandArgValid,
+							Enum: protocol.CommandEnum{
+								Type:    "server",
+								Options: servers,
+							},
+						},
+					},
+				})
+				pk.Commands = append(pk.Commands, protocol.Command{
+					Name:        "transfer",
+					Description: "Transfer to another server!",
+					Overloads:   overloads,
+				})
+				_ = ray.conn.WritePacket(pk)
+				continue
+			}
 			if pk, ok := pk.(*Transfer); ok {
 				s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
 				continue
@@ -159,7 +219,7 @@ func (s *Sun) handleRay(ray *Ray) {
 Changes a players remote and readies the connection
 */
 func (s *Sun) TransferRay(ray *Ray, addr IpAddr) error {
-	log.Println("Transfer request received for ", ray.conn.IdentityData().DisplayName)
+	log.Println("Transfer request received for", ray.conn.IdentityData().DisplayName)
 	if ray.transferring {
 		log.Println("Transfer scrapped because it was already transferring for", ray.conn.IdentityData().DisplayName)
 		return fmt.Errorf("transfer scrapped because it was already transferring for %s", ray.conn.IdentityData().DisplayName)
