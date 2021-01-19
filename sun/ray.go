@@ -250,6 +250,22 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) error {
 	if err != nil {
 		return err
 	}
+	//Make the empty item slice.
+	var items []protocol.ItemInstance
+	for i := 0; i < 36; i++ {
+		items = append(items, protocol.ItemInstance{
+			StackNetworkID: 0,
+			Stack:          protocol.ItemStack{},
+		})
+	}
+	//Clear the player inventory.
+	err = ray.conn.WritePacket(&packet.InventoryContent{
+		WindowID: protocol.WindowIDInventory,
+		Content:  items,
+	})
+	if err != nil {
+		return err
+	}
 	err = ray.conn.WritePacket(&packet.ChangeDimension{
 		Dimension: packet.DimensionNether,
 		Position:  ray.conn.GameData().PlayerPosition,
