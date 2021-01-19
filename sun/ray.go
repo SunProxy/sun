@@ -150,7 +150,7 @@ func (s *Sun) handleRay(ray *Ray) {
 					ray.bufferConn = nil
 					ray.updateTranslatorData(ray.remote.conn.GameData())
 					ray.remoteMu.Unlock()
-					log.Println("Successfully completed transfer for player ", ray.conn.IdentityData().DisplayName)
+					log.Println("Successfully completed transfer for player", ray.conn.IdentityData().DisplayName)
 					continue
 				}
 			}
@@ -193,7 +193,8 @@ func (s *Sun) handleRay(ray *Ray) {
 				continue
 			}
 			if pk, ok := pk.(*Transfer); ok {
-				s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
+				err := s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
+				log.Printf("An Occurred During A transfer request for %s, Error: %s\n!", ray.conn.IdentityData().DisplayName, err.Error())
 				continue
 			}
 			if pk, ok := pk.(*Text); ok {
@@ -256,13 +257,6 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) error {
 	if err != nil {
 		return err
 	}
-	//Update Chunk Radius for players.
-	_ = ray.conn.WritePacket(&packet.NetworkChunkPublisherUpdate{
-		Position: protocol.BlockPos{int32(ray.conn.GameData().PlayerPosition.X()),
-			int32(ray.conn.GameData().PlayerPosition.Y()),
-			int32(ray.conn.GameData().PlayerPosition.Z())},
-		Radius: 12 >> 4,
-	})
 	//send empty chunk data.
 	chunkX := int32(ray.conn.GameData().PlayerPosition.X()) >> 4
 	chunkZ := int32(ray.conn.GameData().PlayerPosition.Z()) >> 4
