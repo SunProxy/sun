@@ -263,6 +263,17 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) error {
 		WindowID: protocol.WindowIDInventory,
 		Content:  items,
 	})
+	//Declare the gamemode variable
+	var gamemode int32
+	//The Gamemode should be the original gamemode of the remote player
+	gamemode = ray.BufferConn().conn.GameData().PlayerGameMode
+	//if the gamemode 5 we use the WorldGameMode as the players
+	if gamemode == 5 {
+		gamemode = ray.BufferConn().conn.GameData().WorldGameMode
+	}
+	err = ray.conn.WritePacket(&packet.SetPlayerGameType{
+		GameType: gamemode,
+	})
 	if err != nil {
 		return err
 	}
