@@ -194,7 +194,7 @@ func (s *Sun) handleRay(ray *Ray) {
 			}
 			if pk, ok := pk.(*Transfer); ok {
 				err := s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
-				log.Printf("An Occurred During A transfer request for %s, Error: %s\n!", ray.conn.IdentityData().DisplayName, err.Error())
+				log.Printf("An Occurred During A transfer request, Error: %s\n!", err.Error())
 				continue
 			}
 			if pk, ok := pk.(*Text); ok {
