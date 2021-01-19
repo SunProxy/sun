@@ -57,23 +57,63 @@ The basic Config file struct.
 type Config struct {
 	Status minecraft.ServerStatus
 
+	/*
+		The First Server the proxy will redirect players too (after @see LoadBalancer)
+	*/
 	Hub IpAddr
 
 	Proxy struct {
+
+		/*
+			The port the Sun Proxy should run on.
+		*/
 		Port uint16
 
+		/*
+			A boolean representing wether or not the proxy should use Xbox Auth.
+		*/
 		XboxAuthentication bool
 
+		/*
+			Unused as of now.
+		*/
 		IpForwarding bool
 
 		TransferCommand struct {
+
+			/*
+				A boolean value representing if sun should enable the transfer command.
+			*/
 			Enabled bool
 
+			/*
+				An array of servers that the transfer command should be using.
+			*/
 			Servers map[string]IpAddr
+		}
+
+		/*
+			Used to redirect players to a new server after the hub is unusable.
+		*/
+		LoadBalancer struct {
+
+			/*
+				A boolean value representing if sun should use LoadBalancing
+			*/
+			Enabled bool
+
+			/*
+				A list of servers to try to balance too after the hub is unusable.
+			*/
+			Balancers []IpAddr
 		}
 	}
 
+	/*
+		The configuration for the tcp server in sun
+	*/
 	Tcp struct {
+
 		/*
 			Specifies if the proxy should run the tcp server
 		*/
@@ -183,6 +223,10 @@ func defaultConfig(config Config) Config {
 	if config.Proxy.TransferCommand.Servers == nil {
 		config.Proxy.TransferCommand.Servers = make(map[string]IpAddr)
 		config.Proxy.TransferCommand.Servers["example"] = IpAddr{Address: "127.0.0.1", Port: 19134}
+	}
+	if config.Proxy.LoadBalancer.Balancers == nil {
+		config.Proxy.LoadBalancer.Balancers = make([]IpAddr, 1)
+		config.Proxy.LoadBalancer.Balancers[0] = IpAddr{Address: "hub-2.mydomain.com", Port: 19132}
 	}
 	return config
 }

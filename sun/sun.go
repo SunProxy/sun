@@ -63,6 +63,7 @@ type Sun struct {
 	PCooldowns      map[string]time.Time
 	Servers         map[string]IpAddr
 	TransferCommand bool
+	LoadBalancer    LoadBalancer
 }
 
 type StatusProvider struct {
@@ -92,6 +93,12 @@ func NewSunW(config Config) (*Sun, error) {
 	if err != nil {
 		return nil, err
 	}
+	lb := LoadBalancer{Enabled: false}
+	if config.Proxy.LoadBalancer.Enabled {
+		lb.Servers = config.Proxy.LoadBalancer.Balancers
+		lb.Overflow = NewOverflowBalancer(lb.Servers)
+		lb.Enabled = true
+	}
 	if config.Tcp.Enabled {
 		plistener, err := net.Listen("tcp", ":42069")
 		if err != nil {
@@ -109,6 +116,7 @@ func NewSunW(config Config) (*Sun, error) {
 			Key:             config.Tcp.Key,
 			TransferCommand: config.Proxy.TransferCommand.Enabled,
 			Servers:         config.Proxy.TransferCommand.Servers,
+			LoadBalancer:    lb,
 		}, nil
 	}
 	registerPackets()
@@ -118,7 +126,8 @@ func NewSunW(config Config) (*Sun, error) {
 			config.Status.MaxPlayers),
 		Hub: config.Hub, Planets: make(map[uuid.UUID]*Planet),
 		TransferCommand: config.Proxy.TransferCommand.Enabled,
-		Servers:         config.Proxy.TransferCommand.Servers}, nil
+		Servers:         config.Proxy.TransferCommand.Servers,
+		LoadBalancer:    lb}, nil
 }
 
 func registerPackets() {
@@ -186,14 +195,9 @@ func (s *Sun) main() {
 			continue
 		}
 		ray := &Ray{conn: conn.(*minecraft.Conn)}
-		rconn, err := minecraft.Dialer{
-			ClientData:   ray.conn.ClientData(),
-			IdentityData: ray.conn.IdentityData()}.Dial("raknet", s.Hub.ToString())
+		rconn, err := s.ConnectToHub(ray)
 		if err != nil {
-			log.Println(err)
-			_ = s.Listener.Disconnect(conn.(*minecraft.Conn),
-				text.Colourf("<red>You Have been Disconnected!</red>"))
-			continue
+
 		}
 		ray.remoteMu.Lock()
 		ray.remote = &Remote{conn: rconn, addr: s.Hub}
@@ -207,6 +211,29 @@ Starts the proxy.
 */
 func (s *Sun) Start() {
 	s.main()
+}
+
+/**
+ConnectToHub will attempt to connect a ray to the hub server.
+If the said hub server rejects the connection for any reason
+the proxy will then go through the overflow Balancer to find the next usable ip until it runs out.
+*/
+func (s *Sun) ConnectToHub(ray *Ray) (*minecraft.Conn, error) {
+	rconn, err := minecraft.Dialer{
+		ClientData:   ray.conn.ClientData(),
+		IdentityData: ray.conn.IdentityData()}.Dial("raknet", s.Hub.ToString())
+	if err != nil {
+		if s.LoadBalancer.Enabled {
+			for i := 0; i < len(s.LoadBalancer.Servers); i++ {
+				conn, err := s.ConnectToHub(ray)
+				if err == nil {
+					return conn, err
+				}
+			}
+			return nil, err
+		}
+	}
+	return rconn, err
 }
 
 /*

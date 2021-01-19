@@ -11,11 +11,16 @@ proxy:
   xboxauthentication: false
   ipforwarding: false
   transfercommand:
-    enabled: true
+    enabled: false
     servers:
       example:
         address: 127.0.0.1
         port: 19134
+  loadbalancer:
+    enabled: false
+    balancers:
+    - address: hub-2.mydomain.com
+      port: 19132
 tcp:
   enabled: false
-  key: KENTUXKLUa1CPLQohZAejcyOs
+  key: XhvMUq7jm1TE39pwprQrjhipZ
