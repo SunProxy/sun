@@ -37,9 +37,8 @@ module github.com/sunproxy/sun
 go 1.14
 
 require (
-	github.com/google/uuid v1.1.2
-	github.com/hlts2/round-robin v0.0.0-20200401070650-85eb7643d48c
 	github.com/google/uuid v1.1.5
+	github.com/hlts2/round-robin v0.0.0-20200401070650-85eb7643d48c
 	github.com/pelletier/go-toml v1.8.1
 	github.com/sandertv/gophertunnel v1.10.3
 	go.uber.org/atomic v1.7.0
