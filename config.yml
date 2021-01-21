@@ -25,6 +25,9 @@ proxy:
   ppof:
     enabled: true
     port: 8080
+  logger:
+    file: sun.log
+    debug: false
 tcp:
   enabled: false
   key: XhvMUq7jm1TE39pwprQrjhipZ

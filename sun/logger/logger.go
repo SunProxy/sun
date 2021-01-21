@@ -71,7 +71,7 @@ func (l Logger) Warnf(Message string, a ...interface{}) error {
 }
 
 func (l Logger) Errorf(Error string, a ...interface{}) error {
-	return l.Log(fmt.Sprintf(Error, a), LogLevelError)
+	return l.Log(fmt.Sprintf(Error, a...), LogLevelError)
 }
 
 func (l Logger) Fatalf(Error string, a ...interface{}) error {
