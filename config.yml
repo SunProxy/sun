@@ -17,17 +17,17 @@ proxy:
         address: 127.0.0.1
         port: 19134
   loadbalancer:
-    enabled: false
+    enabled: true
     balancers:
-    - address: hub-2.mydomain.com
-      port: 19132
+    - address: 127.0.0.1
+      port: 19134
   statuscommand: false
   ppof:
     enabled: true
     port: 8080
   logger:
     file: sun.log
-    debug: false
+    debug: true
 tcp:
   enabled: false
   key: XhvMUq7jm1TE39pwprQrjhipZ

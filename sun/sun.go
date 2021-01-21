@@ -210,6 +210,10 @@ func (s *Sun) main() {
 		if err != nil {
 			_ = s.Logger.Errorf("No Active LoadBalancers or Hub Could accept Ray: %s!",
 				ray.conn.IdentityData().DisplayName)
+			_ = ray.conn.WritePacket(&packet.Disconnect{
+				Message:                 text.Colourf("<red>You Have been Disconnected!</red>"),
+				HideDisconnectionScreen: false})
+			_ = ray.conn.Close()
 			continue
 		}
 		ray.remoteMu.Lock()
@@ -232,14 +236,14 @@ If the said hub server rejects the connection for any reason
 the proxy will then go through the overflow Balancer to find the next usable ip until it runs out.
 */
 func (s *Sun) ConnectToHub(ray *Ray) (*minecraft.Conn, error) {
-	rconn, err := minecraft.Dialer{
-		ClientData:   ray.conn.ClientData(),
-		IdentityData: ray.conn.IdentityData()}.Dial("raknet", s.Hub.ToString())
+	rconn, err := s.Dial(ray, s.Hub)
 	if err != nil {
 		if s.LoadBalancer.Enabled {
 			for i := 0; i < len(s.LoadBalancer.Servers); i++ {
-				conn, err := s.ConnectToHub(ray)
+				conn, err := s.Dial(ray, s.LoadBalancer.Balance(ray))
 				if err == nil {
+					_ = s.Logger.Warnf("Hub Server and LoadBalancers %+v are all down rays are "+
+						"now being connected to LoadBalancer %v", s.LoadBalancer.Servers[:i], i)
 					return conn, err
 				}
 			}
@@ -247,6 +251,12 @@ func (s *Sun) ConnectToHub(ray *Ray) (*minecraft.Conn, error) {
 		}
 	}
 	return rconn, err
+}
+
+func (s *Sun) Dial(ray *Ray, addr IpAddr) (*minecraft.Conn, error) {
+	return minecraft.Dialer{
+		ClientData:   ray.conn.ClientData(),
+		IdentityData: ray.conn.IdentityData()}.Dial("raknet", addr.ToString())
 }
 
 /*
