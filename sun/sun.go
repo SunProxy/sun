@@ -276,7 +276,7 @@ func (s *Sun) MakeRay(ray *Ray) {
 	}()
 	go func() {
 		if err := ray.Remote().conn.DoSpawn(); err != nil {
-			_ = s.Logger.Errorf("Do Spawn Timeout on remote: %s", ray.Remote().Addr())
+			_ = s.Logger.Errorf("Do Spawn Timeout on remote: %s", ray.Remote().Addr().ToString())
 			Gerr = err
 		}
 		g.Done()
