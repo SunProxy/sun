@@ -105,10 +105,14 @@ func (s *Sun) handleRay(ray *Ray) {
 						if len(args) > 1 {
 							server := args[1]
 							if ip, ok := s.Servers[server]; ok {
-								_ = ray.conn.WritePacket(&packet.Text{
+								err = ray.conn.WritePacket(&packet.Text{
 									Message: text.Colourf("<yellow>You Are Being Transferred To Server %s</yellow>",
 										server),
 									TextType: packet.TextTypeRaw})
+								if err != nil {
+									s.BreakRay(ray)
+									return
+								}
 								err := s.TransferRay(ray, ip)
 								if err != nil {
 									_ = ray.conn.WritePacket(&packet.Text{
@@ -117,29 +121,44 @@ func (s *Sun) handleRay(ray *Ray) {
 									continue
 								}
 							} else {
-								_ = ray.conn.WritePacket(&packet.Text{
+								err = ray.conn.WritePacket(&packet.Text{
 									Message: text.Colourf("<red>Server %s Was Not Found In The Config.yml!</red>",
 										server),
 									TextType: packet.TextTypeRaw})
+								if err != nil {
+									s.BreakRay(ray)
+									return
+								}
 								continue
 							}
 						}
-						_ = ray.conn.WritePacket(&packet.Text{
+						err = ray.conn.WritePacket(&packet.Text{
 							Message:  text.Colourf("<red>Please Provide a Server To Be Transferred To!</red>"),
 							TextType: packet.TextTypeRaw})
+						if err != nil {
+							s.BreakRay(ray)
+							return
+						}
 						continue
 					}
 				case "status":
 					if s.StatusCommand {
-						_ = ray.conn.WritePacket(&packet.Text{
+						err = ray.conn.WritePacket(&packet.Text{
 							Message:  text.Colourf("<yellow>---- Status ----</yellow>"),
 							TextType: packet.TextTypeRaw,
 						})
-
-						_ = ray.conn.WritePacket(&packet.Text{
+						if err != nil {
+							s.BreakRay(ray)
+							return
+						}
+						err = ray.conn.WritePacket(&packet.Text{
 							Message:  text.Colourf("<yellow>-----------------</yellow>"),
 							TextType: packet.TextTypeRaw,
 						})
+						if err != nil {
+							s.BreakRay(ray)
+							return
+						}
 					}
 				}
 			case *packet.PlayerAction:
@@ -155,7 +174,7 @@ func (s *Sun) handleRay(ray *Ray) {
 						Position:  pos,
 					})
 					if err != nil {
-						continue
+						s.BreakRay(ray)
 					}
 					_ = old.Close()
 					ray.remoteMu.Lock()

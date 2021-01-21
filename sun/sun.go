@@ -266,23 +266,29 @@ func (s *Sun) MakeRay(ray *Ray) {
 	//start the player up
 	var g sync.WaitGroup
 	g.Add(2)
+	var Gerr error
 	go func() {
 		if err := ray.conn.StartGame(ray.Remote().conn.GameData()); err != nil {
-			panic(err)
+			_ = s.Logger.Errorf("Start Game Timeout on ray: %s", ray.conn.IdentityData().DisplayName)
+			Gerr = err
 		}
 		g.Done()
 	}()
 	go func() {
 		if err := ray.Remote().conn.DoSpawn(); err != nil {
-			panic(err)
+			_ = s.Logger.Errorf("Do Spawn Timeout on remote: %s", ray.Remote().Addr())
+			Gerr = err
 		}
 		g.Done()
 	}()
+	if Gerr != nil {
+		return
+	}
 	g.Wait()
 	//start translator
 	ray.initTranslators(ray.conn.GameData())
 	//Add to player count
-	s.Status.playerc.Add(1)
+	s.Status.playerc.Inc()
 	//add to player list
 	s.Rays[ray.conn.IdentityData().Identity] = ray
 	//Start the two listener functions
@@ -303,7 +309,10 @@ func (s *Sun) SendMessageToServers(Message string, Servers []string) {
 	for _, server := range Servers {
 		for _, ray := range s.Rays {
 			if ray.Remote().Addr().ToString() == server {
-				_ = ray.conn.WritePacket(&packet.Text{Message: Message, TextType: packet.TextTypeRaw})
+				err := ray.conn.WritePacket(&packet.Text{Message: Message, TextType: packet.TextTypeRaw})
+				if err != nil {
+					s.BreakRay(ray)
+				}
 			}
 		}
 	}
@@ -315,7 +324,10 @@ SendMessage is used for sending a Sun wide message to all the connected clients
 func (s *Sun) SendMessage(Message string) {
 	for _, ray := range s.Rays {
 		//Send raw chat to each player as client will accept it
-		_ = ray.conn.WritePacket(&packet.Text{Message: Message, TextType: packet.TextTypeRaw})
+		err := ray.conn.WritePacket(&packet.Text{Message: Message, TextType: packet.TextTypeRaw})
+		if err != nil {
+			s.BreakRay(ray)
+		}
 	}
 }
 
