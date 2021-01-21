@@ -212,7 +212,7 @@ func LoadGobConfig() (Config, error) {
 	return config, nil
 }
 
-/**
+/*
 Should take in a empty config
 */
 func defaultConfig(config Config) Config {

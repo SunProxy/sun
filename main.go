@@ -37,18 +37,18 @@ SOFTWARE.
 package main
 
 import (
-	"fmt"
+	"github.com/fatih/color"
 	"github.com/sunproxy/sun/sun"
-	"log"
+	"github.com/sunproxy/sun/sun/logger"
 )
 
 func main() {
 	s, err := sun.NewSun()
 	if err != nil {
-		log.Println(err)
-		_, _ = fmt.Scanln()
+		_ = s.Logger.Log("Failed To Start Sun, Error: "+err.Error(), logger.LogLevelFatal)
+		//unneeded but just for goland to shut tf up
 		return
 	}
-	fmt.Println("Starting Sun On " + s.Listener.Addr().String() + "!")
+	_ = s.Logger.InfoColorf(color.New(color.FgYellow), "Starting Sun On %s!", s.Listener.Addr().String())
 	s.Start()
 }

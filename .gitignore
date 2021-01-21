@@ -91,3 +91,5 @@ fabric.properties
 
 # ingnore some of the good ole idea shit
 .idea/
+
+*.log

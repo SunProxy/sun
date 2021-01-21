@@ -42,6 +42,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
+	"github.com/sunproxy/sun/sun/logger"
 	sunpacket "github.com/sunproxy/sun/sun/packet"
 	"go.uber.org/atomic"
 	"log"
@@ -68,6 +69,7 @@ type Sun struct {
 	TransferCommand bool
 	LoadBalancer    LoadBalancer
 	StatusCommand   bool
+	Logger          logger.Logger
 }
 
 type StatusProvider struct {
@@ -89,34 +91,42 @@ Returns a new sun with config the specified config hence W
 */
 func NewSunW(config Config) (*Sun, error) {
 	status := StatusProvider{config.Status, atomic.NewInt64(0)}
-	listener, err := minecraft.ListenConfig{
-		AuthenticationDisabled: !config.Proxy.XboxAuthentication,
-		StatusProvider:         status,
-		ResourcePacks:          LoadResourcePacks("./resource_packs/"),
-	}.Listen("raknet", fmt.Sprint(":", config.Proxy.Port))
-	if err != nil {
-		return nil, err
-	}
-	lb := LoadBalancer{Enabled: false}
-	if config.Proxy.LoadBalancer.Enabled {
-		lb.Servers = config.Proxy.LoadBalancer.Balancers
-		lb.Overflow = NewOverflowBalancer(lb.Servers)
-		lb.Enabled = true
-	}
-	if config.Proxy.Ppof.Enabled {
-		go func() {
-			_ = http.ListenAndServe(fmt.Sprint("127.0.0.1:", config.Proxy.Ppof.Port), nil)
-		}()
-	}
-	sun := &Sun{Listener: listener,
+	sun := &Sun{
 		Status: status,
 		Rays: make(map[string]*Ray,
 			config.Status.MaxPlayers),
 		Hub: config.Hub, Planets: make(map[uuid.UUID]*Planet),
 		TransferCommand: config.Proxy.TransferCommand.Enabled,
 		Servers:         config.Proxy.TransferCommand.Servers,
-		LoadBalancer:    lb,
 		StatusCommand:   config.Proxy.StatusCommand,
+		Logger:          logger.New("sun.log", true),
+	}
+	listener, err := minecraft.ListenConfig{
+		AuthenticationDisabled: !config.Proxy.XboxAuthentication,
+		StatusProvider:         status,
+		ResourcePacks:          LoadResourcePacks("./resource_packs/"),
+	}.Listen("raknet", fmt.Sprint(":", config.Proxy.Port))
+	if err != nil {
+		return sun, err
+	}
+	sun.Listener = listener
+	lb := LoadBalancer{Enabled: false}
+	if config.Proxy.LoadBalancer.Enabled {
+		lb.Servers = config.Proxy.LoadBalancer.Balancers
+		lb.Overflow = NewOverflowBalancer(lb.Servers)
+		lb.Enabled = true
+	}
+	sun.LoadBalancer = lb
+	if config.Proxy.Ppof.Enabled {
+		go func() {
+			addr := fmt.Sprint("127.0.0.1:", config.Proxy.Ppof.Port)
+			_ = sun.Logger.Debugf("Ppof webserver starting on %s!", addr)
+			err := http.ListenAndServe(addr, nil)
+			if err != nil {
+				_ = sun.Logger.Warnf("Failed to start Ppof webserver on %s!", addr)
+				return
+			}
+		}()
 	}
 	if config.Tcp.Enabled {
 		plistener, err := net.Listen("tcp", ":42069")
@@ -198,7 +208,9 @@ func (s *Sun) main() {
 		ray := &Ray{conn: conn.(*minecraft.Conn)}
 		rconn, err := s.ConnectToHub(ray)
 		if err != nil {
-
+			_ = s.Logger.Errorf("No Active LoadBalancers or Hub Could accept Ray: %s!",
+				ray.conn.IdentityData().DisplayName)
+			continue
 		}
 		ray.remoteMu.Lock()
 		ray.remote = &Remote{conn: rconn, addr: s.Hub}

@@ -11,7 +11,7 @@ proxy:
   xboxauthentication: false
   ipforwarding: false
   transfercommand:
-    enabled: true
+    enabled: false
     servers:
       example:
         address: 127.0.0.1
@@ -23,7 +23,7 @@ proxy:
       port: 19132
   statuscommand: false
   ppof:
-    enabled: false
+    enabled: true
     port: 8080
 tcp:
   enabled: false
