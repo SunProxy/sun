@@ -27,7 +27,7 @@ const (
 	LogLevelFatal
 )
 
-//used to clean ascii codes
+//used to clean ascii codes yes it stolen lmao
 var reg = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
 func (l Logger) Info(Message string) error {

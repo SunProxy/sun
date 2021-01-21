@@ -117,9 +117,29 @@ type Config struct {
 			A struct used to indicate if the proxy should enable ppof profiling and what port the webserver should run on.
 		*/
 		Ppof struct {
+
+			/*
+			   A boolean representing whether or not the ppof webserver should be started.
+			*/
 			Enabled bool
 
+			/*
+			   The port at which the ppof webserver should run on.
+			*/
 			Port uint16
+		}
+
+		Logger struct {
+
+			/*
+				The path to the file which the logger entries should be written to
+			*/
+			File string
+
+			/*
+				Represents if the logger should display debug messages!
+			*/
+			Debug bool
 		}
 	}
 
@@ -219,31 +239,41 @@ func defaultConfig(config Config) Config {
 	if config.Proxy.Port == 0 {
 		config.Proxy.Port = 19132
 	}
+
 	emptyIp := IpAddr{}
 	if config.Hub == emptyIp {
 		config.Hub.Port = 19133
 		config.Hub.Address = "0.0.0.0"
 	}
+
 	emptyStatus := minecraft.ServerStatus{}
 	if config.Status == emptyStatus {
 		config.Status.MaxPlayers = 50
 		config.Status.PlayerCount = 0
 		config.Status.ServerName = text.Colourf("<yellow>Sun Proxy</yellow>")
 	}
+
 	//Generate a random Key if its empty
 	if config.Tcp.Key == "" {
 		config.Tcp.Key = GenKey()
 	}
+
 	if config.Proxy.TransferCommand.Servers == nil {
 		config.Proxy.TransferCommand.Servers = make(map[string]IpAddr)
 		config.Proxy.TransferCommand.Servers["example"] = IpAddr{Address: "127.0.0.1", Port: 19134}
 	}
+
 	if config.Proxy.LoadBalancer.Balancers == nil {
 		config.Proxy.LoadBalancer.Balancers = make([]IpAddr, 1)
 		config.Proxy.LoadBalancer.Balancers[0] = IpAddr{Address: "hub-2.mydomain.com", Port: 19132}
 	}
+
 	if config.Proxy.Ppof.Port == 0 {
 		config.Proxy.Ppof.Port = 8080
+	}
+
+	if config.Proxy.Logger.File == "" {
+		config.Proxy.Logger.File = "sun.log"
 	}
 	return config
 }

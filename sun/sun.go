@@ -99,7 +99,7 @@ func NewSunW(config Config) (*Sun, error) {
 		TransferCommand: config.Proxy.TransferCommand.Enabled,
 		Servers:         config.Proxy.TransferCommand.Servers,
 		StatusCommand:   config.Proxy.StatusCommand,
-		Logger:          logger.New("sun.log", true),
+		Logger:          logger.New(config.Proxy.Logger.File, config.Proxy.Logger.Debug),
 	}
 	listener, err := minecraft.ListenConfig{
 		AuthenticationDisabled: !config.Proxy.XboxAuthentication,
