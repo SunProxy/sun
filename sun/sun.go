@@ -42,9 +42,12 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
+	sunpacket "github.com/sunproxy/sun/sun/packet"
 	"go.uber.org/atomic"
 	"log"
 	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"sync"
 	"time"
 )
@@ -64,6 +67,7 @@ type Sun struct {
 	Servers         map[string]IpAddr
 	TransferCommand bool
 	LoadBalancer    LoadBalancer
+	StatusCommand   bool
 }
 
 type StatusProvider struct {
@@ -99,40 +103,37 @@ func NewSunW(config Config) (*Sun, error) {
 		lb.Overflow = NewOverflowBalancer(lb.Servers)
 		lb.Enabled = true
 	}
-	if config.Tcp.Enabled {
-		plistener, err := net.Listen("tcp", ":42069")
-		if err != nil {
-			return nil, err
-		}
-		registerPackets()
-		return &Sun{Listener: listener,
-			PListener:  plistener,
-			PCooldowns: make(map[string]time.Time),
-			PWarnings:  make(map[string]int),
-			Status:     status,
-			Rays: make(map[string]*Ray,
-				config.Status.MaxPlayers),
-			Hub: config.Hub, Planets: make(map[uuid.UUID]*Planet),
-			Key:             config.Tcp.Key,
-			TransferCommand: config.Proxy.TransferCommand.Enabled,
-			Servers:         config.Proxy.TransferCommand.Servers,
-			LoadBalancer:    lb,
-		}, nil
+	if config.Proxy.Ppof.Enabled {
+		go func() {
+			_ = http.ListenAndServe(fmt.Sprint("127.0.0.1:", config.Proxy.Ppof.Port), nil)
+		}()
 	}
-	registerPackets()
-	return &Sun{Listener: listener,
+	sun := &Sun{Listener: listener,
 		Status: status,
 		Rays: make(map[string]*Ray,
 			config.Status.MaxPlayers),
 		Hub: config.Hub, Planets: make(map[uuid.UUID]*Planet),
 		TransferCommand: config.Proxy.TransferCommand.Enabled,
 		Servers:         config.Proxy.TransferCommand.Servers,
-		LoadBalancer:    lb}, nil
+		LoadBalancer:    lb,
+		StatusCommand:   config.Proxy.StatusCommand,
+	}
+	if config.Tcp.Enabled {
+		plistener, err := net.Listen("tcp", ":42069")
+		if err != nil {
+			return nil, err
+		}
+		sun.PListener = plistener
+		sun.PCooldowns = make(map[string]time.Time)
+		sun.PWarnings = make(map[string]int)
+	}
+	registerPackets()
+	return sun, nil
 }
 
 func registerPackets() {
-	packet.Register(IDRayTransfer, func() packet.Packet { return &Transfer{} })
-	packet.Register(IDRayText, func() packet.Packet { return &Text{} })
+	packet.Register(sunpacket.IDRayTransfer, func() packet.Packet { return &sunpacket.Transfer{} })
+	packet.Register(sunpacket.IDRayText, func() packet.Packet { return &sunpacket.Text{} })
 }
 
 /*
@@ -159,14 +160,14 @@ func (s *Sun) main() {
 				pl := &Planet{conn: conn}
 				if tl, ok := s.PCooldowns[pl.conn.RemoteAddr().String()]; ok {
 					if time.Now().Before(tl) {
-						_ = pl.WritePacket(&PlanetDisconnect{Message: fmt.Sprintf("You are on cooldown for %v seconds!", time.Now().Sub(s.PCooldowns[pl.conn.RemoteAddr().String()]).Seconds())})
+						_ = pl.WritePacket(&sunpacket.PlanetDisconnect{Message: fmt.Sprintf("You are on cooldown for %v seconds!", time.Now().Sub(s.PCooldowns[pl.conn.RemoteAddr().String()]).Seconds())})
 						_ = pl.conn.Close()
 						continue
 					}
 					delete(s.PCooldowns, conn.RemoteAddr().String())
 				}
 				pk, err := pl.ReadPacket()
-				if pk, ok := pk.(*PlanetAuth); ok {
+				if pk, ok := pk.(*sunpacket.PlanetAuth); ok {
 					if pk.Key == s.Key {
 						s.AddPlanet(pl)
 						continue
@@ -179,10 +180,10 @@ func (s *Sun) main() {
 				if s.PWarnings[pl.conn.RemoteAddr().String()] <= 0 {
 					s.PWarnings[pl.conn.RemoteAddr().String()] = 3
 					s.PCooldowns[pl.conn.RemoteAddr().String()] = time.Now().Add(300 * time.Second)
-					_ = pl.WritePacket(&PlanetDisconnect{Message: fmt.Sprintf("You are on cooldown for %v seconds!", time.Now().Sub(s.PCooldowns[pl.conn.RemoteAddr().String()]).Seconds())})
+					_ = pl.WritePacket(&sunpacket.PlanetDisconnect{Message: fmt.Sprintf("You are on cooldown for %v seconds!", time.Now().Sub(s.PCooldowns[pl.conn.RemoteAddr().String()]).Seconds())})
 					_ = pl.conn.Close()
 				}
-				_ = pl.WritePacket(&PlanetDisconnect{Message: fmt.Sprintf("Invalid Authorization Key Provided %v Tries Remain Until A 300 Second Cooldown!", s.PWarnings[pl.conn.RemoteAddr().String()])})
+				_ = pl.WritePacket(&sunpacket.PlanetDisconnect{Message: fmt.Sprintf("Invalid Authorization Key Provided %v Tries Remain Until A 300 Second Cooldown!", s.PWarnings[pl.conn.RemoteAddr().String()])})
 				continue
 			}
 		}()

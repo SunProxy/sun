@@ -37,8 +37,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
+	sunpacket "github.com/sunproxy/sun/sun/packet"
 	"log"
 	"net"
+	"strings"
 )
 
 type Planet struct {
@@ -48,6 +50,8 @@ type Planet struct {
 	id   uuid.UUID
 }
 
+//Used to create a NewPlanet
+//noinspection GoUnusedFunction
 func NewPlanet(ip IpAddr) (*Planet, error) {
 	conn, err := net.Dial("tcp", ip.ToString())
 	if err != nil {
@@ -97,27 +101,39 @@ func (s *Sun) handlePlanet(planet *Planet) {
 				log.Println(err)
 				return
 			}
-			if pk, ok := pk.(*PlanetTransfer); ok {
+			if pk, ok := pk.(*sunpacket.PlanetTransfer); ok {
 				if ray, ok := s.Rays[pk.User]; ok {
 					err := s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
 					if err != nil {
-
+						if strings.Contains(err.Error(), "no such host") {
+							_ = planet.WritePacket(&sunpacket.TransferResponse{Type: sunpacket.TransferResponseRemoteNotFound, Message: err.Error()})
+						} else {
+							_ = planet.WritePacket(&sunpacket.TransferResponse{Type: sunpacket.TransferResponseRemoteRejection, Message: err.Error()})
+						}
+						continue
 					}
-					_ = planet.WritePacket(&TransferResponse{Type: TransferResponseSuccess, Message: "Transfer successful!"})
+					_ = planet.WritePacket(&sunpacket.TransferResponse{Type: sunpacket.TransferResponseSuccess, Message: "Transfer successful!"})
 				} else {
+					_ = planet.WritePacket(&sunpacket.TransferResponse{Type: sunpacket.TransferResponseBadRequest, Message: "Player not found in this proxy!"})
 					log.Printf("Received bad request from planet: %s, the player by uuid %s was not found!\n", planet.conn.RemoteAddr(), pk.User)
 				}
 				continue
 			}
-			if pk, ok := pk.(*Text); ok {
+			if pk, ok := pk.(*sunpacket.Text); ok {
+				if pk.Message == "" {
+					_ = planet.WritePacket(&sunpacket.TextResponse{Type: sunpacket.TextResponseBadRequest, Message: "A Message mustn't be empty."})
+					continue
+				}
 				//Only iterate if we have to.
 				if len(pk.Servers) > 0 {
 					//in a new routine because of the iteration
 					go s.SendMessageToServers(pk.Message, pk.Servers)
+					_ = planet.WritePacket(&sunpacket.TextResponse{Type: sunpacket.TextResponseSuccess, Message: "Successfully sent message!"})
 					continue
 				}
 				//if len(pk.Servers) == 0
 				s.SendMessage(pk.Message)
+				_ = planet.WritePacket(&sunpacket.TextResponse{Type: sunpacket.TextResponseSuccess, Message: "Successfully sent message!"})
 				continue
 			}
 		}

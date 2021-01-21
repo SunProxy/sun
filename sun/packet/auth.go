@@ -1,6 +1,8 @@
-package sun
+package packet
 
-import "github.com/sandertv/gophertunnel/minecraft/protocol"
+import (
+	"github.com/sandertv/gophertunnel/minecraft/protocol"
+)
 
 type PlanetAuth struct {
 	Key string
@@ -17,4 +19,3 @@ func (p *PlanetAuth) Marshal(w *protocol.Writer) {
 func (p *PlanetAuth) Unmarshal(r *protocol.Reader) {
 	r.String(&p.Key)
 }
-

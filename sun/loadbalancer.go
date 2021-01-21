@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/url"
 	"strconv"
-	"strings"
 )
 
 type Balancer interface {
@@ -28,9 +27,8 @@ type OverflowBalancer struct {
 
 func (r *OverflowBalancer) Balance(ray *Ray) IpAddr {
 	ul := r.rr.Next()
-	arr := strings.Split(ul.Host, ":")
-	port, _ := strconv.Atoi(arr[1])
-	return IpAddr{Address: arr[0], Port: uint16(port)}
+	port, _ := strconv.Atoi(ul.Port())
+	return IpAddr{Address: ul.Hostname(), Port: uint16(port)}
 }
 
 func NewOverflowBalancer(servers []IpAddr) *OverflowBalancer {

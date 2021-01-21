@@ -34,7 +34,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-package sun
+package packet
 
 /**
 The RakNet connection or rather mcpe packet ids
@@ -44,6 +44,9 @@ const (
 	IDRayText
 )
 
+/**
+The TCP api packet ids.
+*/
 const (
 	IDPlanetAuth = iota
 	IDPlanetDisconnect
@@ -51,4 +54,8 @@ const (
 	IDPlanetTransferResponse
 	IDPlanetText
 	IDPlanetTextResponse
+	//Is sent back if the given request is correct.
+	IDPlanetUserInfo
+	//used to send back errors
+	IDPlanetUserInfoResponse
 )

@@ -42,6 +42,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
+	sunpacket "github.com/sunproxy/sun/sun/packet"
 	"log"
 	"strings"
 	"sync"
@@ -97,10 +98,10 @@ func (s *Sun) handleRay(ray *Ray) {
 			ray.translatePacket(pk)
 			switch pk := pk.(type) {
 			case *packet.CommandRequest:
-				if s.TransferCommand {
-					args := strings.Split(pk.CommandLine, " ")
-					switch args[0][1:] {
-					case "transfer":
+				args := strings.Split(pk.CommandLine, " ")
+				switch args[0][1:] {
+				case "transfer":
+					if s.TransferCommand {
 						if len(args) > 1 {
 							server := args[1]
 							if ip, ok := s.Servers[server]; ok {
@@ -127,6 +128,18 @@ func (s *Sun) handleRay(ray *Ray) {
 							Message:  text.Colourf("<red>Please Provide a Server To Be Transferred To!</red>"),
 							TextType: packet.TextTypeRaw})
 						continue
+					}
+				case "status":
+					if s.StatusCommand {
+						_ = ray.conn.WritePacket(&packet.Text{
+							Message:  text.Colourf("<yellow>---- Status ----</yellow>"),
+							TextType: packet.TextTypeRaw,
+						})
+
+						_ = ray.conn.WritePacket(&packet.Text{
+							Message:  text.Colourf("<yellow>-----------------</yellow>"),
+							TextType: packet.TextTypeRaw,
+						})
 					}
 				}
 			case *packet.PlayerAction:
@@ -167,37 +180,45 @@ func (s *Sun) handleRay(ray *Ray) {
 				continue
 			}
 			ray.translatePacket(pk)
-			if pk, ok := pk.(*packet.AvailableCommands); ok && s.TransferCommand {
-				var servers []string
-				var overloads []protocol.CommandOverload
-				for name := range s.Servers {
-					servers = append(servers, name)
-				}
-				overloads = append(overloads, protocol.CommandOverload{
-					Parameters: []protocol.CommandParameter{
-						{Name: "server",
-							Type: protocol.CommandArgEnum | protocol.CommandArgValid,
-							Enum: protocol.CommandEnum{
-								Type:    "server",
-								Options: servers,
+			if pk, ok := pk.(*packet.AvailableCommands); ok {
+				if s.TransferCommand {
+					var servers []string
+					var overloads []protocol.CommandOverload
+					for name := range s.Servers {
+						servers = append(servers, name)
+					}
+					overloads = append(overloads, protocol.CommandOverload{
+						Parameters: []protocol.CommandParameter{
+							{Name: "server",
+								Type: protocol.CommandArgEnum | protocol.CommandArgValid,
+								Enum: protocol.CommandEnum{
+									Type:    "server",
+									Options: servers,
+								},
 							},
 						},
-					},
-				})
-				pk.Commands = append(pk.Commands, protocol.Command{
-					Name:        "transfer",
-					Description: "Transfer to another server!",
-					Overloads:   overloads,
-				})
-				_ = ray.conn.WritePacket(pk)
-				continue
+					})
+					pk.Commands = append(pk.Commands, protocol.Command{
+						Name:        "transfer",
+						Description: "Transfer to another server!",
+						Overloads:   overloads,
+					})
+					_ = ray.conn.WritePacket(pk)
+					continue
+				} else if s.StatusCommand {
+					pk.Commands = append(pk.Commands, protocol.Command{
+						Name:        "status",
+						Description: "Provides information on the sun proxies load and player count!",
+					})
+					_ = ray.conn.WritePacket(pk)
+				}
 			}
-			if pk, ok := pk.(*Transfer); ok {
+			if pk, ok := pk.(*sunpacket.Transfer); ok {
 				err := s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
 				log.Printf("An Occurred During A transfer request, Error: %s\n!", err.Error())
 				continue
 			}
-			if pk, ok := pk.(*Text); ok {
+			if pk, ok := pk.(*sunpacket.Text); ok {
 				//Only iterate if we have to.
 				if len(pk.Servers) > 0 {
 					//in a new routine because of the iteration

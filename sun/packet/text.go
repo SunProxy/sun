@@ -34,87 +34,80 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-package sun
+package packet
 
 import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
-	"io"
 )
 
-//Transfer is sent by the server to change a Players remote connection otherwise known as the fast transfer packet
-type Transfer struct {
-	// Address is the address of the new server, which might be either a hostname or an actual IP address.
-	Address string
-	// Port is the UDP port of the new server.
-	Port uint16
-}
+/*
+Text is sent by the server to send a message to all the connected players on the proxy.
+*/
+type Text struct {
+	/*
+		Servers is an array of strings that contains the servers IP addresses the text message should be broadcast to
+	*/
+	Servers []string
 
-func (pk *Transfer) ID() uint32 {
-	return IDRayTransfer
-}
-
-func (pk *Transfer) Marshal(w *protocol.Writer) {
-	w.String(&pk.Address)
-	w.Uint16(&pk.Port)
-}
-
-func (pk *Transfer) Unmarshal(r *protocol.Reader) {
-	r.String(&pk.Address)
-	r.Uint16(&pk.Port)
-}
-
-type PlanetTransfer struct {
-	// Address is the address of the new server, which might be either a hostname or an actual IP address.
-	Address string
-	// Port is the UDP port of the new server.
-	Port uint16
-	//User is the uuid of the given player to transfer
-	User string
-}
-
-func (pk *PlanetTransfer) ID() uint32 {
-	return IDPlanetTransfer
-}
-
-func (pk *PlanetTransfer) Marshal(w *protocol.Writer) {
-	w.String(&pk.Address)
-	w.Uint16(&pk.Port)
-	w.String(&pk.User)
-}
-
-func (pk *PlanetTransfer) Unmarshal(r *protocol.Reader) {
-	r.String(&pk.Address)
-	r.Uint16(&pk.Port)
-	r.String(&pk.User)
-}
-
-const (
-	TransferResponseSuccess = iota
-	TransferResponseRemoteNotFound
-	TransferResponseRemoteRejection
-)
-
-type TransferResponse struct {
-	//Type is the said given type of response that we return
-	Type byte
-	//Message is a given message sent back with the response
+	/*
+		The text message
+	*/
 	Message string
 }
 
-func (t *TransferResponse) parse(reader io.Reader) error {
-	panic("implement me")
+func (pk *Text) ID() uint32 {
+	return IDPlanetText
 }
 
-func (t *TransferResponse) ID() uint32 {
-	return IDPlanetTransferResponse
+func (pk *Text) Marshal(w *protocol.Writer) {
+	l := uint32(len(pk.Servers))
+	w.Varuint32(&l)
+	for _, v := range pk.Servers {
+		w.String(&v)
+	}
 }
 
-func (t *TransferResponse) Marshal(w *protocol.Writer) {
+func (pk *Text) Unmarshal(r *protocol.Reader) {
+	//if count == 0 we send it to all the connect clients.
+	var count uint32
+	r.Varuint32(&count)
+	pk.Servers = make([]string, count)
+	for i := uint32(0); i < count; i++ {
+		r.String(&pk.Servers[i])
+	}
+}
+
+const (
+	TextResponseSuccess = iota
+	TextResponseBadRequest
+	TextResponseTargetsNotFound
+)
+
+/*
+TextResponse is sent in response to a tcp api call to the Text packet.
+*/
+type TextResponse struct {
+	/*
+		Type is const shown above that represents the status of the request.
+	*/
+	Type byte
+
+	/*
+		Message is a accompanied message to the status can be anything basically.
+	*/
+	Message string
+}
+
+func (t TextResponse) ID() uint32 {
+	return IDPlanetTextResponse
+}
+
+func (t TextResponse) Marshal(w *protocol.Writer) {
 	w.Uint8(&t.Type)
 	w.String(&t.Message)
 }
 
-func (t *TransferResponse) Unmarshal(r *protocol.Reader) {
+func (t TextResponse) Unmarshal(r *protocol.Reader) {
 	r.Uint8(&t.Type)
 	r.String(&t.Message)
 }

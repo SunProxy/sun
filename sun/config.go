@@ -107,6 +107,20 @@ type Config struct {
 			*/
 			Balancers []IpAddr
 		}
+
+		/*
+			A boolean value representing if the /status command should be overridden.
+		*/
+		StatusCommand bool
+
+		/*
+			A struct used to indicate if the proxy should enable ppof profiling and what port the webserver should run on.
+		*/
+		Ppof struct {
+			Enabled bool
+
+			Port uint16
+		}
 	}
 
 	/*
@@ -227,6 +241,9 @@ func defaultConfig(config Config) Config {
 	if config.Proxy.LoadBalancer.Balancers == nil {
 		config.Proxy.LoadBalancer.Balancers = make([]IpAddr, 1)
 		config.Proxy.LoadBalancer.Balancers[0] = IpAddr{Address: "hub-2.mydomain.com", Port: 19132}
+	}
+	if config.Proxy.Ppof.Port == 0 {
+		config.Proxy.Ppof.Port = 8080
 	}
 	return config
 }

@@ -1,6 +1,8 @@
-package sun
+package packet
 
-import "github.com/sandertv/gophertunnel/minecraft/protocol"
+import (
+	"github.com/sandertv/gophertunnel/minecraft/protocol"
+)
 
 type PlanetDisconnect struct {
 	Message string
@@ -17,4 +19,3 @@ func (p *PlanetDisconnect) Marshal(w *protocol.Writer) {
 func (p *PlanetDisconnect) Unmarshal(r *protocol.Reader) {
 	r.String(&p.Message)
 }
-

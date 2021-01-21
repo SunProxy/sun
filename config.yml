@@ -21,6 +21,10 @@ proxy:
     balancers:
     - address: hub-2.mydomain.com
       port: 19132
+  statuscommand: false
+  ppof:
+    enabled: false
+    port: 8080
 tcp:
   enabled: false
   key: XhvMUq7jm1TE39pwprQrjhipZ
