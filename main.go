@@ -39,13 +39,12 @@ package main
 import (
 	"github.com/fatih/color"
 	"github.com/sunproxy/sun/sun"
-	"github.com/sunproxy/sun/sun/logger"
 )
 
 func main() {
 	s, err := sun.NewSun()
 	if err != nil {
-		_ = s.Logger.Log("Failed To Start Sun, Error: "+err.Error(), logger.LogLevelFatal)
+		_ = s.Logger.Fatalf("Failed To Start Sun, Error: %s", err.Error())
 		//unneeded but just for goland to shut tf up
 		return
 	}

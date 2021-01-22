@@ -167,7 +167,7 @@ func (s *Sun) main() {
 					log.Println(err)
 					continue
 				}
-				pl := &Planet{conn: conn}
+				pl := NewPlanet(conn)
 				if tl, ok := s.PCooldowns[pl.conn.RemoteAddr().String()]; ok {
 					if time.Now().Before(tl) {
 						_ = pl.WritePacket(&sunpacket.PlanetDisconnect{Message: fmt.Sprintf("You are on cooldown for %v seconds!", time.Now().Sub(s.PCooldowns[pl.conn.RemoteAddr().String()]).Seconds())})

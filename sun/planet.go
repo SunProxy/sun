@@ -52,12 +52,20 @@ type Planet struct {
 
 //Used to create a NewPlanet
 //noinspection GoUnusedFunction
-func NewPlanet(ip IpAddr) (*Planet, error) {
-	conn, err := net.Dial("tcp", ip.ToString())
-	if err != nil {
-		return &Planet{}, err
-	}
-	return &Planet{conn: conn}, nil
+func NewPlanet(conn net.Conn) *Planet {
+	return &Planet{conn: conn, pool: newTcpPool()}
+}
+
+func newTcpPool() packet.Pool {
+	pool := make(packet.Pool)
+	pool[sunpacket.IDPlanetAuth] = &sunpacket.PlanetAuth{}
+	pool[sunpacket.IDPlanetDisconnect] = &sunpacket.PlanetDisconnect{}
+	pool[sunpacket.IDPlanetTransfer] = &sunpacket.PlanetTransfer{}
+	pool[sunpacket.IDPlanetTransferResponse] = &sunpacket.TransferResponse{}
+	pool[sunpacket.IDPlanetText] = &sunpacket.Text{}
+	pool[sunpacket.IDPlanetTextResponse] = &sunpacket.TextResponse{}
+	pool[sunpacket.IDPlanetUserInfo] = &sunpacket.UserInfo{}
+	return pool
 }
 
 func (p *Planet) ReadPacket() (packet.Packet, error) {
