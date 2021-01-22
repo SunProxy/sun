@@ -42,8 +42,6 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/mem"
 	sunpacket "github.com/sunproxy/sun/sun/packet"
 	"log"
 	"runtime"
@@ -150,7 +148,8 @@ func (s *Sun) handleRay(ray *Ray) {
 						if err != nil {
 							return
 						}
-						stats, err := mem.VirtualMemory()
+						stats := &runtime.MemStats{}
+						runtime.ReadMemStats(stats)
 						if err != nil {
 							err = ray.conn.WritePacket(&packet.Text{
 								Message: text.Colourf("<red>Error retrieving " +
@@ -162,36 +161,18 @@ func (s *Sun) handleRay(ray *Ray) {
 							}
 							continue
 						}
-						cpus, _ := cpu.Percent(time.Second, true)
-						err = ray.conn.WritePacket(&packet.Text{
-							Message: text.Colourf("<yellow>Total Cpu Usage:</yellow>"+
-								" <red>%v</red>",
-								cpus[0]),
-							TextType: packet.TextTypeRaw})
-						if err != nil {
-							return
-						}
-						err = ray.conn.WritePacket(&packet.Text{
-							Message: text.Colourf("<yellow>Total Memory:</yellow> "+
-								"<red>%v bytes</red>",
-								stats.Total),
-							TextType: packet.TextTypeRaw})
-						if err != nil {
-							return
-						}
 						err = ray.conn.WritePacket(&packet.Text{
 							Message: text.Colourf("<yellow>Total Ram Usage:</yellow>"+
-								" <red>%v bytes</red><yellow>, "+
-								"Percentage:</yellow> <red>%v</red>",
-								stats.Used, stats.UsedPercent),
+								" <red>%v bytes</red><yellow>, ", stats.Alloc),
 							TextType: packet.TextTypeRaw})
 						if err != nil {
 							return
 						}
 						err = ray.conn.WritePacket(&packet.Text{
-							Message: text.Colourf("<yellow>Free Memory:</yellow> "+
+							Message: text.Colourf("<yellow>All Time Allocated Memory"+
+								":</yellow> "+
 								"<red>%v bytes</red>",
-								stats.Free),
+								stats.TotalAlloc),
 							TextType: packet.TextTypeRaw})
 						if err != nil {
 							return
