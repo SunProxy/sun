@@ -42,8 +42,8 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
 	sunpacket "github.com/sunproxy/sun/sun/packet"
 	"log"
 	"runtime"
@@ -144,7 +144,7 @@ func (s *Sun) handleRay(ray *Ray) {
 				case "status":
 					if s.StatusCommand {
 						err = ray.conn.WritePacket(&packet.Text{
-							Message:  text.Colourf("<yellow>---- Status ----</yellow>"),
+							Message:  text.Colourf("<yellow>---- <red>Status</red> ----</yellow>"),
 							TextType: packet.TextTypeRaw,
 						})
 						if err != nil {
@@ -164,37 +164,48 @@ func (s *Sun) handleRay(ray *Ray) {
 						}
 						cpus, _ := cpu.Percent(time.Second, true)
 						err = ray.conn.WritePacket(&packet.Text{
-							Message: text.Colourf("<yellow>Total Cpu Usage: %v</yellow>",
+							Message: text.Colourf("<yellow>Total Cpu Usage:</yellow>"+
+								" <red>%v</red>",
 								cpus[0]),
 							TextType: packet.TextTypeRaw})
 						if err != nil {
 							return
 						}
 						err = ray.conn.WritePacket(&packet.Text{
-							Message: text.Colourf("<yellow>Total Memory: %vbytes</yellow>",
+							Message: text.Colourf("<yellow>Total Memory:</yellow> "+
+								"<red>%v bytes</red>",
 								stats.Total),
 							TextType: packet.TextTypeRaw})
 						if err != nil {
 							return
 						}
 						err = ray.conn.WritePacket(&packet.Text{
-							Message: text.Colourf("<yellow>Total Ram Usage: %vbytes, "+
-								"Percentage: %v</yellow>",
+							Message: text.Colourf("<yellow>Total Ram Usage:</yellow>"+
+								" <red>%v bytes</red><yellow>, "+
+								"Percentage:</yellow> <red>%v</red>",
 								stats.Used, stats.UsedPercent),
 							TextType: packet.TextTypeRaw})
 						if err != nil {
 							return
 						}
 						err = ray.conn.WritePacket(&packet.Text{
-							Message: text.Colourf("<yellow>Free Memory: %vbytes</yellow>",
+							Message: text.Colourf("<yellow>Free Memory:</yellow> "+
+								"<red>%v bytes</red>",
 								stats.Free),
 							TextType: packet.TextTypeRaw})
 						if err != nil {
 							return
 						}
 						err = ray.conn.WritePacket(&packet.Text{
-							Message: text.Colourf("<yellow>Total GoRoutine Count: %v</yellow>",
+							Message: text.Colourf("<yellow>Total GoRoutine Count:</yellow> <red>%v</red>",
 								runtime.NumGoroutine()),
+							TextType: packet.TextTypeRaw})
+						if err != nil {
+							return
+						}
+						err = ray.conn.WritePacket(&packet.Text{
+							Message: text.Colourf("<yellow>Total Player Count:<yellow> <red>%v</red>",
+								len(s.Rays)),
 							TextType: packet.TextTypeRaw})
 						if err != nil {
 							return
