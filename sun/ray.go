@@ -163,7 +163,7 @@ func (s *Sun) handleRay(ray *Ray) {
 						}
 						err = ray.conn.WritePacket(&packet.Text{
 							Message: text.Colourf("<yellow>Total Ram Usage:</yellow>"+
-								" <red>%v bytes</red><yellow>, ", stats.Alloc),
+								" <red>%v bytes</red>", stats.Alloc),
 							TextType: packet.TextTypeRaw})
 						if err != nil {
 							return
