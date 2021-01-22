@@ -42,8 +42,11 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 	sunpacket "github.com/sunproxy/sun/sun/packet"
 	"log"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -110,7 +113,6 @@ func (s *Sun) handleRay(ray *Ray) {
 										server),
 									TextType: packet.TextTypeRaw})
 								if err != nil {
-									s.BreakRay(ray)
 									return
 								}
 								err := s.TransferRay(ray, ip)
@@ -126,7 +128,6 @@ func (s *Sun) handleRay(ray *Ray) {
 										server),
 									TextType: packet.TextTypeRaw})
 								if err != nil {
-									s.BreakRay(ray)
 									return
 								}
 								continue
@@ -136,7 +137,6 @@ func (s *Sun) handleRay(ray *Ray) {
 							Message:  text.Colourf("<red>Please Provide a Server To Be Transferred To!</red>"),
 							TextType: packet.TextTypeRaw})
 						if err != nil {
-							s.BreakRay(ray)
 							return
 						}
 						continue
@@ -148,7 +148,55 @@ func (s *Sun) handleRay(ray *Ray) {
 							TextType: packet.TextTypeRaw,
 						})
 						if err != nil {
-							s.BreakRay(ray)
+							return
+						}
+						stats, err := mem.VirtualMemory()
+						if err != nil {
+							err = ray.conn.WritePacket(&packet.Text{
+								Message: text.Colourf("<red>Error retrieving " +
+									"virtual memory statistics!</red>"),
+								TextType: packet.TextTypeRaw,
+							})
+							if err != nil {
+								return
+							}
+							continue
+						}
+						cpus, _ := cpu.Percent(time.Second, true)
+						err = ray.conn.WritePacket(&packet.Text{
+							Message: text.Colourf("<yellow>Total Cpu Usage: %v</yellow>",
+								cpus[0]),
+							TextType: packet.TextTypeRaw})
+						if err != nil {
+							return
+						}
+						err = ray.conn.WritePacket(&packet.Text{
+							Message: text.Colourf("<yellow>Total Memory: %vbytes</yellow>",
+								stats.Total),
+							TextType: packet.TextTypeRaw})
+						if err != nil {
+							return
+						}
+						err = ray.conn.WritePacket(&packet.Text{
+							Message: text.Colourf("<yellow>Total Ram Usage: %vbytes, "+
+								"Percentage: %v</yellow>",
+								stats.Used, stats.UsedPercent),
+							TextType: packet.TextTypeRaw})
+						if err != nil {
+							return
+						}
+						err = ray.conn.WritePacket(&packet.Text{
+							Message: text.Colourf("<yellow>Free Memory: %vbytes</yellow>",
+								stats.Free),
+							TextType: packet.TextTypeRaw})
+						if err != nil {
+							return
+						}
+						err = ray.conn.WritePacket(&packet.Text{
+							Message: text.Colourf("<yellow>Total GoRoutine Count: %v</yellow>",
+								runtime.NumGoroutine()),
+							TextType: packet.TextTypeRaw})
+						if err != nil {
 							return
 						}
 						err = ray.conn.WritePacket(&packet.Text{
@@ -156,9 +204,10 @@ func (s *Sun) handleRay(ray *Ray) {
 							TextType: packet.TextTypeRaw,
 						})
 						if err != nil {
-							s.BreakRay(ray)
+
 							return
 						}
+						continue
 					}
 				}
 			case *packet.PlayerAction:

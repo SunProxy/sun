@@ -43,6 +43,7 @@ require (
 	github.com/mattn/go-colorable v0.1.8
 	github.com/pelletier/go-toml v1.8.1
 	github.com/sandertv/gophertunnel v1.10.4-0.20210121102113-ae9d03cbafad
+	github.com/shirou/gopsutil/v3 v3.20.12
 	go.uber.org/atomic v1.7.0
 	gopkg.in/yaml.v2 v2.4.0
 )

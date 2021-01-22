@@ -21,7 +21,7 @@ proxy:
     balancers:
     - address: 127.0.0.1
       port: 19134
-  statuscommand: false
+  statuscommand: true
   ppof:
     enabled: true
     port: 8080
