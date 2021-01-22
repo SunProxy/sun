@@ -57,6 +57,9 @@ type Ray struct {
 	Translations *TranslatorMappings
 	transferring bool
 	remoteMu     sync.Mutex
+	TransferData struct {
+		scoreboardNames map[string]struct{}
+	}
 }
 
 type TranslatorMappings struct {
@@ -240,7 +243,8 @@ func (s *Sun) handleRay(ray *Ray) {
 				continue
 			}
 			ray.translatePacket(pk)
-			if pk, ok := pk.(*packet.AvailableCommands); ok {
+			switch pk := pk.(type) {
+			case *packet.AvailableCommands:
 				if s.TransferCommand {
 					var servers []string
 					var overloads []protocol.CommandOverload
@@ -272,13 +276,11 @@ func (s *Sun) handleRay(ray *Ray) {
 					})
 					_ = ray.conn.WritePacket(pk)
 				}
-			}
-			if pk, ok := pk.(*sunpacket.Transfer); ok {
+			case *sunpacket.Transfer:
 				err := s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
 				log.Printf("An Occurred During A transfer request, Error: %s\n!", err.Error())
 				continue
-			}
-			if pk, ok := pk.(*sunpacket.Text); ok {
+			case *sunpacket.Text:
 				//Only iterate if we have to.
 				if len(pk.Servers) > 0 {
 					//in a new routine because of the iteration
@@ -288,6 +290,10 @@ func (s *Sun) handleRay(ray *Ray) {
 				//if len(pk.Servers) == 0
 				s.SendMessage(pk.Message)
 				continue
+			case *packet.RemoveObjective:
+				delete(ray.TransferData.scoreboardNames, pk.ObjectiveName)
+			case *packet.SetDisplayObjective:
+				ray.TransferData.scoreboardNames[pk.ObjectiveName] = struct{}{}
 			}
 			err = ray.conn.WritePacket(pk)
 			if err != nil {
@@ -324,12 +330,11 @@ func (s *Sun) TransferRay(ray *Ray, addr IpAddr) error {
 	if err != nil {
 		return err
 	}
-	err = ray.conn.WritePacket(&packet.SetScoreboardIdentity{
-		ActionType: packet.ScoreboardIdentityActionClear,
-		Entries:    nil,
-	})
-	if err != nil {
-		return err
+	for obj := range ray.TransferData.scoreboardNames {
+		err := ray.conn.WritePacket(&packet.RemoveObjective{ObjectiveName: obj})
+		if err != nil {
+			return err
+		}
 	}
 	//Make the empty item slice.
 	var items []protocol.ItemInstance

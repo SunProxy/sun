@@ -90,15 +90,17 @@ func (l Logger) Log(Message string, Level uint16) error {
 	Message += "\n"
 	switch Level {
 	case LogLevelInfo:
-		_, err := l.Stdout.Write([]byte(Message))
+		_, err := l.Stdout.Write([]byte(color.HiBlueString("INFO[%s] %s", time.Now().String(), Message)))
 		if err != nil {
 			return err
 		}
-		_, err = l.File.WriteString(reg.ReplaceAllString(Message, ""))
+		_, err = l.File.WriteString(fmt.Sprintf("INFO[%s] %s", time.Now().String(),
+			reg.ReplaceAllString(Message, "")))
 		return err
 	case LogLevelDebug:
 		if l.ShowDebug {
-			_, err := l.Stdout.Write([]byte(color.BlueString("DEBUG[%s] %s", time.Now().String(), Message)))
+			_, err := l.Stdout.Write([]byte(color.BlueString("DEBUG[%s] %s",
+				time.Now().String(), Message)))
 			if err != nil {
 				return err
 			}
@@ -114,7 +116,8 @@ func (l Logger) Log(Message string, Level uint16) error {
 		_, err = l.File.WriteString(reg.ReplaceAllString(Message, ""))
 		return err
 	case LogLevelWarning:
-		_, err := l.Stdout.Write([]byte(color.HiYellowString("WARN[%s] %s", time.Now().String(), Message)))
+		_, err := l.Stdout.Write([]byte(color.HiYellowString("WARN[%s] %s", time.Now().String(),
+			Message)))
 		if err != nil {
 			return err
 		}
