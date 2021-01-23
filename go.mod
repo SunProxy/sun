@@ -45,7 +45,7 @@ require (
 	github.com/lazytiger/go-v8 v0.0.0-20131210065505-b2466929848d // indirect
 	github.com/mattn/go-colorable v0.1.8
 	github.com/pelletier/go-toml v1.8.1
-	github.com/sandertv/gophertunnel v1.10.4-0.20210121102113-ae9d03cbafad
+	github.com/sandertv/gophertunnel v1.10.0
 	go.uber.org/atomic v1.7.0
 	gopkg.in/yaml.v2 v2.4.0
 	rogchap.com/v8go v0.4.0 // indirect
