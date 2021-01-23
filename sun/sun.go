@@ -205,7 +205,10 @@ func (s *Sun) main() {
 			log.Println(err)
 			continue
 		}
-		ray := &Ray{conn: conn.(*minecraft.Conn)}
+		ray := &Ray{conn: conn.(*minecraft.Conn),
+			TransferData: struct{ scoreboardNames map[string]struct{} }{
+				scoreboardNames: make(map[string]struct{})},
+		}
 		rconn, err := s.ConnectToHub(ray)
 		if err != nil {
 			_ = s.Logger.Errorf("No Active LoadBalancers or Hub Could accept Ray: %s!",
