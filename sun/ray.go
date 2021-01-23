@@ -278,7 +278,9 @@ func (s *Sun) handleRay(ray *Ray) {
 				}
 			case *sunpacket.Transfer:
 				err := s.TransferRay(ray, IpAddr{Address: pk.Address, Port: pk.Port})
-				log.Printf("An Occurred During A transfer request, Error: %s\n!", err.Error())
+				if err != nil {
+					log.Printf("An Occurred During A transfer request, Error: %s\n!", err.Error())
+				}
 				continue
 			case *sunpacket.Text:
 				//Only iterate if we have to.
