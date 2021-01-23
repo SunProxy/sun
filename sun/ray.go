@@ -114,6 +114,8 @@ func (s *Sun) handleRay(ray *Ray) {
 										server),
 									TextType: packet.TextTypeRaw})
 								if err != nil {
+									_ = s.Logger.Debugf("Error Stopped Listener "+
+										"Routine: %s", err.Error())
 									return
 								}
 								err := s.TransferRay(ray, ip)
@@ -129,6 +131,8 @@ func (s *Sun) handleRay(ray *Ray) {
 										server),
 									TextType: packet.TextTypeRaw})
 								if err != nil {
+									_ = s.Logger.Debugf("Error Stopped Listener "+
+										"Routine: %s", err.Error())
 									return
 								}
 								continue
@@ -138,6 +142,8 @@ func (s *Sun) handleRay(ray *Ray) {
 							Message:  text.Colourf("<red>Please Provide a Server To Be Transferred To!</red>"),
 							TextType: packet.TextTypeRaw})
 						if err != nil {
+							_ = s.Logger.Debugf("Error Stopped Listener "+
+								"Routine: %s", err.Error())
 							return
 						}
 						continue
@@ -149,6 +155,8 @@ func (s *Sun) handleRay(ray *Ray) {
 							TextType: packet.TextTypeRaw,
 						})
 						if err != nil {
+							_ = s.Logger.Debugf("Error Stopped Listener "+
+								"Routine: %s", err.Error())
 							return
 						}
 						stats := &runtime.MemStats{}
@@ -160,6 +168,8 @@ func (s *Sun) handleRay(ray *Ray) {
 								TextType: packet.TextTypeRaw,
 							})
 							if err != nil {
+								_ = s.Logger.Debugf("Error Stopped Listener "+
+									"Routine: %s", err.Error())
 								return
 							}
 							continue
@@ -169,6 +179,8 @@ func (s *Sun) handleRay(ray *Ray) {
 								" <red>%v bytes</red>", stats.Alloc),
 							TextType: packet.TextTypeRaw})
 						if err != nil {
+							_ = s.Logger.Debugf("Error Stopped Listener "+
+								"Routine: %s", err.Error())
 							return
 						}
 						err = ray.conn.WritePacket(&packet.Text{
@@ -178,6 +190,8 @@ func (s *Sun) handleRay(ray *Ray) {
 								stats.TotalAlloc),
 							TextType: packet.TextTypeRaw})
 						if err != nil {
+							_ = s.Logger.Debugf("Error Stopped Listener "+
+								"Routine: %s", err.Error())
 							return
 						}
 						err = ray.conn.WritePacket(&packet.Text{
@@ -185,6 +199,8 @@ func (s *Sun) handleRay(ray *Ray) {
 								runtime.NumGoroutine()),
 							TextType: packet.TextTypeRaw})
 						if err != nil {
+							_ = s.Logger.Debugf("Error Stopped Listener "+
+								"Routine: %s", err.Error())
 							return
 						}
 						err = ray.conn.WritePacket(&packet.Text{
@@ -192,6 +208,8 @@ func (s *Sun) handleRay(ray *Ray) {
 								len(s.Rays)),
 							TextType: packet.TextTypeRaw})
 						if err != nil {
+							_ = s.Logger.Debugf("Error Stopped Listener "+
+								"Routine: %s", err.Error())
 							return
 						}
 						err = ray.conn.WritePacket(&packet.Text{
@@ -199,7 +217,8 @@ func (s *Sun) handleRay(ray *Ray) {
 							TextType: packet.TextTypeRaw,
 						})
 						if err != nil {
-
+							_ = s.Logger.Debugf("Error Stopped Listener "+
+								"Routine: %s", err.Error())
 							return
 						}
 						continue
@@ -232,6 +251,8 @@ func (s *Sun) handleRay(ray *Ray) {
 			}
 			err = ray.Remote().conn.WritePacket(pk)
 			if err != nil {
+				_ = s.Logger.Debugf("Error Stopped Listener "+
+					"Routine: %s", err.Error())
 				return
 			}
 		}
@@ -240,7 +261,9 @@ func (s *Sun) handleRay(ray *Ray) {
 		for {
 			pk, err := ray.Remote().conn.ReadPacket()
 			if err != nil {
-				continue
+				_ = s.Logger.Debugf("Error Stopped Listener "+
+					"Routine: %s", err.Error())
+				return
 			}
 			ray.translatePacket(pk)
 			switch pk := pk.(type) {
@@ -299,6 +322,8 @@ func (s *Sun) handleRay(ray *Ray) {
 			}
 			err = ray.conn.WritePacket(pk)
 			if err != nil {
+				_ = s.Logger.Debugf("Error Stopped Listener "+
+					"Routine: %s", err.Error())
 				return
 			}
 		}
