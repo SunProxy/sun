@@ -90,9 +90,9 @@ func (s StatusProvider) ServerStatus(_ int, _ int) minecraft.ServerStatus {
 Returns a new sun with config the specified config hence W
 */
 func NewSunW(config Config) (*Sun, error) {
-	status := StatusProvider{config.Status, atomic.NewInt64(0)}
+	var status minecraft.ServerStatusProvider
+	status = StatusProvider{config.Status, atomic.NewInt64(0)}
 	sun := &Sun{
-		Status: status,
 		Rays: make(map[string]*Ray,
 			config.Status.MaxPlayers),
 		Hub: config.Hub, Planets: make(map[uuid.UUID]*Planet),
@@ -101,11 +101,20 @@ func NewSunW(config Config) (*Sun, error) {
 		StatusCommand:   config.Proxy.StatusCommand,
 		Logger:          logger.New(config.Proxy.Logger.File, config.Proxy.Logger.Debug),
 	}
+	if config.Proxy.MOTDForward {
+		tmpStatus, err := sun.MotdForward()
+		if err != nil {
+			_ = sun.Logger.Warn("Unable to MOTDForward to any LoadBalancer or the hub, Falling back to the normal status.")
+		} else {
+			status = tmpStatus
+		}
+	}
 	listener, err := minecraft.ListenConfig{
 		AuthenticationDisabled: !config.Proxy.XboxAuthentication,
 		StatusProvider:         status,
 		ResourcePacks:          LoadResourcePacks("./resource_packs/"),
 	}.Listen("raknet", fmt.Sprint(":", config.Proxy.Port))
+	sun.Status = StatusProvider{config.Status, atomic.NewInt64(0)}
 	if err != nil {
 		return sun, err
 	}
@@ -144,6 +153,24 @@ func NewSunW(config Config) (*Sun, error) {
 func registerPackets() {
 	packet.Register(sunpacket.IDRayTransfer, func() packet.Packet { return &sunpacket.Transfer{} })
 	packet.Register(sunpacket.IDRayText, func() packet.Packet { return &sunpacket.Text{} })
+}
+
+func (s *Sun) MotdForward() (*minecraft.ForeignStatusProvider, error) {
+	status, err := minecraft.NewForeignStatusProvider(s.Hub.ToString())
+	if err != nil {
+		if s.LoadBalancer.Enabled {
+			for i := 0; i < len(s.LoadBalancer.Servers); i++ {
+				status, err := minecraft.NewForeignStatusProvider(s.LoadBalancer.Balance(nil).ToString())
+				if err == nil {
+					_ = s.Logger.Warnf("Hub Server and LoadBalancers %+v are all down rays are "+
+						"now being connected to LoadBalancer %v", s.LoadBalancer.Servers[:i], i)
+					return status, err
+				}
+			}
+			return nil, err
+		}
+	}
+	return status, nil
 }
 
 /*

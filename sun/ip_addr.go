@@ -45,6 +45,6 @@ type IpAddr struct {
 	Port    uint16
 }
 
-func (ip *IpAddr) ToString() string {
+func (ip IpAddr) ToString() string {
 	return fmt.Sprint(ip.Address, ":", ip.Port)
 }

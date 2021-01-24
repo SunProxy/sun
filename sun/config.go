@@ -141,6 +141,11 @@ type Config struct {
 			*/
 			Debug bool
 		}
+
+		/*
+			A boolean representing whether or not to forward the motd to the hub or the first open LoadBalancer
+		*/
+		MOTDForward bool
 	}
 
 	/*

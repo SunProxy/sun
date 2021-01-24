@@ -28,6 +28,7 @@ proxy:
   logger:
     file: sun.log
     debug: true
+  motdforward: false
 tcp:
   enabled: false
   key: XhvMUq7jm1TE39pwprQrjhipZ
