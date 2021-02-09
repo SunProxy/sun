@@ -4,7 +4,7 @@ status:
   maxplayers: 50
   showversion: false
 hub:
-  address: 0.0.0.0
+  address: 127.0.0.1
   port: 19133
 proxy:
   port: 19132
@@ -27,7 +27,7 @@ proxy:
     port: 8080
   logger:
     file: sun.log
-    debug: true
+    debug: false
   motdforward: false
 tcp:
   enabled: false

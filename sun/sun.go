@@ -42,8 +42,13 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
+	"github.com/sunproxy/sun/sun/ip_addr"
 	"github.com/sunproxy/sun/sun/logger"
 	sunpacket "github.com/sunproxy/sun/sun/packet"
+	"github.com/sunproxy/sun/sun/planet"
+	"github.com/sunproxy/sun/sun/plugin"
+	"github.com/sunproxy/sun/sun/ray"
+	"github.com/sunproxy/sun/sun/remote"
 	"go.uber.org/atomic"
 	"log"
 	"net"
@@ -57,19 +62,20 @@ var emptychunk = make([]byte, 257)
 
 type Sun struct {
 	Listener        *minecraft.Listener
-	Rays            map[string]*Ray
-	Hub             IpAddr
-	Planets         map[uuid.UUID]*Planet
+	Rays            map[string]*ray.Ray
+	Hub             ip_addr.IpAddr
+	Planets         map[uuid.UUID]*planet.Planet
 	PListener       net.Listener
 	Status          StatusProvider
 	Key             string
 	PWarnings       map[string]int
 	PCooldowns      map[string]time.Time
-	Servers         map[string]IpAddr
+	Servers         map[string]ip_addr.IpAddr
 	TransferCommand bool
 	LoadBalancer    LoadBalancer
 	StatusCommand   bool
 	Logger          logger.Logger
+	PluginManager   *plugin.Manager
 }
 
 type StatusProvider struct {
@@ -93,14 +99,15 @@ func NewSunW(config Config) (*Sun, error) {
 	var status minecraft.ServerStatusProvider
 	status = StatusProvider{config.Status, atomic.NewInt64(0)}
 	sun := &Sun{
-		Rays: make(map[string]*Ray,
+		Rays: make(map[string]*ray.Ray,
 			config.Status.MaxPlayers),
-		Hub: config.Hub, Planets: make(map[uuid.UUID]*Planet),
+		Hub: config.Hub, Planets: make(map[uuid.UUID]*planet.Planet),
 		TransferCommand: config.Proxy.TransferCommand.Enabled,
 		Servers:         config.Proxy.TransferCommand.Servers,
 		StatusCommand:   config.Proxy.StatusCommand,
 		Logger:          logger.New(config.Proxy.Logger.File, config.Proxy.Logger.Debug),
 	}
+	sun.PluginManager = plugin.NewManager(sun.Logger)
 	if config.Proxy.MOTDForward {
 		tmpStatus, err := sun.MotdForward()
 		if err != nil {
@@ -185,6 +192,8 @@ func NewSun() (*Sun, error) {
 }
 
 func (s *Sun) main() {
+	_ = s.PluginManager.VM.Set("Sun", s)
+	s.PluginManager.LoadPluginDir()
 	defer s.Listener.Close()
 	if s.PListener != nil {
 		go func() {
@@ -194,11 +203,13 @@ func (s *Sun) main() {
 					log.Println(err)
 					continue
 				}
-				pl := NewPlanet(conn)
-				if tl, ok := s.PCooldowns[pl.conn.RemoteAddr().String()]; ok {
+				pl := planet.NewPlanet(conn)
+				if tl, ok := s.PCooldowns[pl.Conn().RemoteAddr().String()]; ok {
 					if time.Now().Before(tl) {
-						_ = pl.WritePacket(&sunpacket.PlanetDisconnect{Message: fmt.Sprintf("You are on cooldown for %v seconds!", time.Now().Sub(s.PCooldowns[pl.conn.RemoteAddr().String()]).Seconds())})
-						_ = pl.conn.Close()
+						_ = pl.WritePacket(&sunpacket.PlanetDisconnect{Message: fmt.Sprintf("You are on cooldown for %v seconds!",
+							time.Now().Sub(s.PCooldowns[pl.Conn().RemoteAddr().String()]).
+								Seconds())})
+						_ = pl.Conn().Close()
 						continue
 					}
 					delete(s.PCooldowns, conn.RemoteAddr().String())
@@ -210,17 +221,23 @@ func (s *Sun) main() {
 						continue
 					}
 				}
-				if _, ok := s.PWarnings[pl.conn.RemoteAddr().String()]; !ok {
-					s.PWarnings[pl.conn.RemoteAddr().String()] = 3
+				if _, ok := s.PWarnings[pl.Conn().RemoteAddr().String()]; !ok {
+					s.PWarnings[pl.Conn().RemoteAddr().String()] = 3
 				}
-				s.PWarnings[pl.conn.RemoteAddr().String()]--
-				if s.PWarnings[pl.conn.RemoteAddr().String()] <= 0 {
-					s.PWarnings[pl.conn.RemoteAddr().String()] = 3
-					s.PCooldowns[pl.conn.RemoteAddr().String()] = time.Now().Add(300 * time.Second)
-					_ = pl.WritePacket(&sunpacket.PlanetDisconnect{Message: fmt.Sprintf("You are on cooldown for %v seconds!", time.Now().Sub(s.PCooldowns[pl.conn.RemoteAddr().String()]).Seconds())})
-					_ = pl.conn.Close()
+				s.PWarnings[pl.Conn().RemoteAddr().String()]--
+				if s.PWarnings[pl.Conn().RemoteAddr().String()] <= 0 {
+					s.PWarnings[pl.Conn().RemoteAddr().String()] = 3
+					s.PCooldowns[pl.Conn().RemoteAddr().String()] = time.Now().Add(300 * time.Second)
+					_ = pl.WritePacket(&sunpacket.PlanetDisconnect{Message: fmt.Sprintf("You are on cooldown for %v seconds!",
+						time.Now().Sub(s.PCooldowns[pl.Conn().RemoteAddr().String()]).Seconds(),
+					)})
+					_ = pl.Conn().Close()
 				}
-				_ = pl.WritePacket(&sunpacket.PlanetDisconnect{Message: fmt.Sprintf("Invalid Authorization Key Provided %v Tries Remain Until A 300 Second Cooldown!", s.PWarnings[pl.conn.RemoteAddr().String()])})
+				_ = pl.WritePacket(
+					&sunpacket.PlanetDisconnect{
+						Message: fmt.Sprintf("Invalid Authorization Key Provided %v "+
+							"Tries Remain Until A 300 Second Cooldown!",
+							s.PWarnings[pl.Conn().RemoteAddr().String()])})
 				continue
 			}
 		}()
@@ -232,24 +249,23 @@ func (s *Sun) main() {
 			log.Println(err)
 			continue
 		}
-		ray := &Ray{conn: conn.(*minecraft.Conn),
-			TransferData: struct{ scoreboardNames map[string]struct{} }{
-				scoreboardNames: make(map[string]struct{})},
+		r := ray.New(conn.(*minecraft.Conn))
+		if s.PluginManager.Handler != nil {
+			r.Handle(s.PluginManager.Handler)
 		}
-		rconn, err := s.ConnectToHub(ray)
+		rconn, err := s.ConnectToHub(r)
 		if err != nil {
 			_ = s.Logger.Errorf("No Active LoadBalancers or Hub Could accept Ray: %s!",
-				ray.conn.IdentityData().DisplayName)
-			_ = ray.conn.WritePacket(&packet.Disconnect{
+				r.Conn().IdentityData().DisplayName)
+			_ = r.Conn().WritePacket(&packet.Disconnect{
 				Message:                 text.Colourf("<red>You Have been Disconnected!</red>"),
 				HideDisconnectionScreen: false})
-			_ = ray.conn.Close()
+			_ = r.Conn().Close()
 			continue
 		}
-		ray.remoteMu.Lock()
-		ray.remote = &Remote{conn: rconn, addr: s.Hub}
-		ray.remoteMu.Unlock()
-		s.MakeRay(ray)
+
+		r.SetRemote(remote.New(rconn, s.Hub))
+		s.MakeRay(r)
 	}
 }
 
@@ -265,7 +281,7 @@ ConnectToHub will attempt to connect a ray to the hub server.
 If the said hub server rejects the connection for any reason
 the proxy will then go through the overflow Balancer to find the next usable ip until it runs out.
 */
-func (s *Sun) ConnectToHub(ray *Ray) (*minecraft.Conn, error) {
+func (s *Sun) ConnectToHub(ray *ray.Ray) (*minecraft.Conn, error) {
 	rconn, err := s.Dial(ray, s.Hub)
 	if err != nil {
 		if s.LoadBalancer.Enabled {
@@ -283,29 +299,29 @@ func (s *Sun) ConnectToHub(ray *Ray) (*minecraft.Conn, error) {
 	return rconn, err
 }
 
-func (s *Sun) Dial(ray *Ray, addr IpAddr) (*minecraft.Conn, error) {
+func (s *Sun) Dial(ray *ray.Ray, addr ip_addr.IpAddr) (*minecraft.Conn, error) {
 	return minecraft.Dialer{
-		ClientData:   ray.conn.ClientData(),
-		IdentityData: ray.conn.IdentityData()}.Dial("raknet", addr.ToString())
+		ClientData:   ray.Conn().ClientData(),
+		IdentityData: ray.Conn().IdentityData()}.Dial("raknet", addr.ToString())
 }
 
 /*
 Adds a player to the sun and readies them
 */
-func (s *Sun) MakeRay(ray *Ray) {
+func (s *Sun) MakeRay(ray *ray.Ray) {
 	//start the player up
 	var g sync.WaitGroup
 	g.Add(2)
 	var Gerr error
 	go func() {
-		if err := ray.conn.StartGame(ray.Remote().conn.GameData()); err != nil {
-			_ = s.Logger.Errorf("Start Game Timeout on ray: %s", ray.conn.IdentityData().DisplayName)
+		if err := ray.Conn().StartGame(ray.Remote().Conn.GameData()); err != nil {
+			_ = s.Logger.Errorf("Start Game Timeout on ray: %s", ray.Conn().IdentityData().DisplayName)
 			Gerr = err
 		}
 		g.Done()
 	}()
 	go func() {
-		if err := ray.Remote().conn.DoSpawn(); err != nil {
+		if err := ray.Remote().Conn.DoSpawn(); err != nil {
 			_ = s.Logger.Errorf("Do Spawn Timeout on remote: %s", ray.Remote().Addr().ToString())
 			Gerr = err
 		}
@@ -316,11 +332,11 @@ func (s *Sun) MakeRay(ray *Ray) {
 	}
 	g.Wait()
 	//start translator
-	ray.initTranslators(ray.conn.GameData())
+	ray.InitTranslators(ray.Conn().GameData())
 	//Add to player count
 	s.Status.playerc.Inc()
 	//add to player list
-	s.Rays[ray.conn.IdentityData().Identity] = ray
+	s.Rays[ray.Conn().IdentityData().Identity] = ray
 	//Start the two listener functions
 	s.handleRay(ray)
 }
@@ -328,20 +344,20 @@ func (s *Sun) MakeRay(ray *Ray) {
 /*
 Closes a players session cleanly with a nice disconnection message!
 */
-func (s *Sun) BreakRay(ray *Ray) {
-	_ = s.Listener.Disconnect(ray.conn, text.Colourf("<red>You Have been Disconnected!</red>"))
-	_ = ray.Remote().conn.Close()
+func (s *Sun) BreakRay(ray *ray.Ray) {
+	_ = s.Listener.Disconnect(ray.Conn(), text.Colourf("<red>You Have been Disconnected!</red>"))
+	_ = ray.Remote().Conn.Close()
 	s.Status.playerc.Dec()
-	delete(s.Rays, ray.conn.IdentityData().Identity)
+	delete(s.Rays, ray.Conn().IdentityData().Identity)
 }
 
 func (s *Sun) SendMessageToServers(Message string, Servers []string) {
 	for _, server := range Servers {
-		for _, ray := range s.Rays {
-			if ray.Remote().Addr().ToString() == server {
-				err := ray.conn.WritePacket(&packet.Text{Message: Message, TextType: packet.TextTypeRaw})
+		for _, r := range s.Rays {
+			if r.Remote().Addr().ToString() == server {
+				err := r.Conn().WritePacket(&packet.Text{Message: Message, TextType: packet.TextTypeRaw})
 				if err != nil {
-					s.BreakRay(ray)
+					s.BreakRay(r)
 				}
 			}
 		}
@@ -352,18 +368,18 @@ func (s *Sun) SendMessageToServers(Message string, Servers []string) {
 SendMessage is used for sending a Sun wide message to all the connected clients
 */
 func (s *Sun) SendMessage(Message string) {
-	for _, ray := range s.Rays {
+	for _, r := range s.Rays {
 		//Send raw chat to each player as client will accept it
-		err := ray.conn.WritePacket(&packet.Text{Message: Message, TextType: packet.TextTypeRaw})
+		err := r.Conn().WritePacket(&packet.Text{Message: Message, TextType: packet.TextTypeRaw})
 		if err != nil {
-			s.BreakRay(ray)
+			s.BreakRay(r)
 		}
 	}
 }
 
-func (s *Sun) AddPlanet(planet *Planet) {
+func (s *Sun) AddPlanet(planet *planet.Planet) {
 	id := uuid.New()
-	planet.id = id
+	planet.Id = id
 	s.Planets[id] = planet
 	s.handlePlanet(planet)
 }

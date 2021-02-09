@@ -34,17 +34,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-package sun
+package remote
 
 import (
 	"github.com/sandertv/gophertunnel/minecraft"
+	"github.com/sunproxy/sun/sun/ip_addr"
 )
 
 type Remote struct {
-	conn *minecraft.Conn
-	addr IpAddr
+	Conn *minecraft.Conn
+	addr ip_addr.IpAddr
 }
 
-func (r *Remote) Addr() *IpAddr {
+func (r *Remote) Addr() *ip_addr.IpAddr {
 	return &r.addr
+}
+
+func New(conn *minecraft.Conn, addr ip_addr.IpAddr) *Remote {
+	return &Remote{Conn: conn, addr: addr}
 }

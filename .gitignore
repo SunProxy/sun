@@ -93,3 +93,6 @@ fabric.properties
 .idea/
 
 *.log
+
+plugins/
+resource_packs/

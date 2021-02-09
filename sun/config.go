@@ -44,6 +44,7 @@ import (
 	"github.com/pelletier/go-toml"
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/text"
+	"github.com/sunproxy/sun/sun/ip_addr"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"math/rand"
@@ -60,7 +61,7 @@ type Config struct {
 	/*
 		The First Server the proxy will redirect players too (after @see LoadBalancer)
 	*/
-	Hub IpAddr
+	Hub ip_addr.IpAddr
 
 	Proxy struct {
 
@@ -89,7 +90,7 @@ type Config struct {
 			/*
 				An array of servers that the transfer command should be using.
 			*/
-			Servers map[string]IpAddr
+			Servers map[string]ip_addr.IpAddr
 		}
 
 		/*
@@ -105,7 +106,7 @@ type Config struct {
 			/*
 				A list of servers to try to balance too after the hub is unusable.
 			*/
-			Balancers []IpAddr
+			Balancers []ip_addr.IpAddr
 		}
 
 		/*
@@ -245,7 +246,7 @@ func defaultConfig(config Config) Config {
 		config.Proxy.Port = 19132
 	}
 
-	emptyIp := IpAddr{}
+	emptyIp := ip_addr.IpAddr{}
 	if config.Hub == emptyIp {
 		config.Hub.Port = 19133
 		config.Hub.Address = "0.0.0.0"
@@ -264,13 +265,13 @@ func defaultConfig(config Config) Config {
 	}
 
 	if config.Proxy.TransferCommand.Servers == nil {
-		config.Proxy.TransferCommand.Servers = make(map[string]IpAddr)
-		config.Proxy.TransferCommand.Servers["example"] = IpAddr{Address: "127.0.0.1", Port: 19134}
+		config.Proxy.TransferCommand.Servers = make(map[string]ip_addr.IpAddr)
+		config.Proxy.TransferCommand.Servers["example"] = ip_addr.IpAddr{Address: "127.0.0.1", Port: 19134}
 	}
 
 	if config.Proxy.LoadBalancer.Balancers == nil {
-		config.Proxy.LoadBalancer.Balancers = make([]IpAddr, 1)
-		config.Proxy.LoadBalancer.Balancers[0] = IpAddr{Address: "hub-2.mydomain.com", Port: 19132}
+		config.Proxy.LoadBalancer.Balancers = make([]ip_addr.IpAddr, 1)
+		config.Proxy.LoadBalancer.Balancers[0] = ip_addr.IpAddr{Address: "hub-2.mydomain.com", Port: 19132}
 	}
 
 	if config.Proxy.Ppof.Port == 0 {

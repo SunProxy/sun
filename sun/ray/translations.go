@@ -34,7 +34,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-package sun
+package ray
 
 /*
 We store all the translation shit in here
@@ -46,7 +46,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 )
 
-func (r *Ray) translatePacket(pk packet.Packet) {
+func (r *Ray) TranslatePacket(pk packet.Packet) {
 	switch pk := pk.(type) {
 	case *packet.ActorEvent:
 		pk.EntityRuntimeID = r.translateRuntimeID(pk.EntityRuntimeID)
@@ -188,7 +188,7 @@ func (r *Ray) translateUniqueID(id int64) int64 {
 	return id
 }
 
-func (r *Ray) initTranslators(data minecraft.GameData) {
+func (r *Ray) InitTranslators(data minecraft.GameData) {
 	r.Translations = &TranslatorMappings{
 		OriginalEntityRuntimeID: data.EntityRuntimeID,
 		OriginalEntityUniqueID:  data.EntityUniqueID,
