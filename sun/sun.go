@@ -42,6 +42,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
+	"github.com/sunproxy/sun/sun/event"
 	"github.com/sunproxy/sun/sun/ip_addr"
 	"github.com/sunproxy/sun/sun/logger"
 	sunpacket "github.com/sunproxy/sun/sun/packet"
@@ -76,6 +77,8 @@ type Sun struct {
 	StatusCommand   bool
 	Logger          logger.Logger
 	PluginManager   *plugin.Manager
+	handler         Handler
+	handlerMu       sync.RWMutex
 }
 
 type StatusProvider struct {
@@ -331,14 +334,19 @@ func (s *Sun) MakeRay(ray *ray.Ray) {
 		return
 	}
 	g.Wait()
-	//start translator
-	ray.InitTranslators(ray.Conn().GameData())
-	//Add to player count
-	s.Status.playerc.Inc()
-	//add to player list
-	s.Rays[ray.Conn().IdentityData().Identity] = ray
-	//Start the two listener functions
-	s.handleRay(ray)
+	//Run through the join handler
+	ctx := event.C()
+	ctx.Continue(func() {
+		//start translator
+		ray.InitTranslators(ray.Conn().GameData())
+		//Add to player count
+		s.Status.playerc.Inc()
+		//add to player list
+		s.Rays[ray.Conn().IdentityData().Identity] = ray
+		//Start the two listener functions
+		s.handleRay(ray)
+	})
+	s.Handler().HandleRayJoin(ctx, ray)
 }
 
 /*
@@ -382,4 +390,23 @@ func (s *Sun) AddPlanet(planet *planet.Planet) {
 	planet.Id = id
 	s.Planets[id] = planet
 	s.handlePlanet(planet)
+}
+
+func (s *Sun) Handler() Handler {
+	if s == nil {
+		return NopHandler{}
+	}
+	s.handlerMu.RLock()
+	handler := s.handler
+	s.handlerMu.RUnlock()
+	return handler
+}
+
+func (s *Sun) Handle(handler Handler) {
+	s.handlerMu.Lock()
+	defer s.handlerMu.Unlock()
+	if handler == nil {
+		handler = NopHandler{}
+	}
+	s.handler = handler
 }
