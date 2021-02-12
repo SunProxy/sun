@@ -1,11 +1,44 @@
+/**
+      ___           ___           ___
+     /  /\         /__/\         /__/\
+    /  /:/_        \  \:\        \  \:\
+   /  /:/ /\        \  \:\        \  \:\
+  /  /:/ /::\   ___  \  \:\   _____\__\:\
+ /__/:/ /:/\:\ /__/\  \__\:\ /__/::::::::\
+ \  \:\/:/~/:/ \  \:\ /  /:/ \  \:\~~\~~\/
+  \  \::/ /:/   \  \:\  /:/   \  \:\  ~~~
+   \__\/ /:/     \  \:\/:/     \  \:\
+     /__/:/       \  \::/       \  \:\
+     \__\/         \__\/         \__\/
+
+MIT License
+
+Copyright (c) 2020 Jviguy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 package plugin
 
 import (
 	"github.com/robertkrimen/otto"
-	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
-	"github.com/sunproxy/sun/sun/event"
 	"github.com/sunproxy/sun/sun/logger"
-	"github.com/sunproxy/sun/sun/ray"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
@@ -18,15 +51,13 @@ type Manager struct {
 	Logger logger.Logger
 	//map of the said plugins loaded
 	Plugins map[string]Plugin
-	//The handler that we provide
-	Handler ray.Handler
 }
 
 func NewManager(log logger.Logger) *Manager {
 	iso := otto.New()
-	_ = iso.Set("events", false)
+	//just an alias to sun.Logger.FUNC
 	_ = iso.Set("logger", log)
-	return &Manager{Logger: log, Plugins: make(map[string]Plugin), VM: iso, Handler: nil}
+	return &Manager{Logger: log, Plugins: make(map[string]Plugin), VM: iso}
 }
 
 func (m *Manager) LoadPluginDir() {
@@ -66,28 +97,5 @@ func (m *Manager) LoadPlugin(plugin Plugin) error {
 		return err
 	}
 	_, err = m.VM.Run(string(data))
-	if val, _ := m.VM.Get("events"); val.IsBoolean() {
-		if enabled, _ := val.ToBoolean(); enabled {
-			m.Handler = EventHandler{VM: m.VM}
-		}
-	}
 	return err
-}
-
-type EventHandler struct {
-	VM *otto.Otto
-}
-
-func (e EventHandler) HandlePacketReceive(ctx *event.Context, pk packet.Packet, ray *ray.Ray) {
-	_, err := e.VM.Call("packet_receive", nil, ctx, pk, ray)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (e EventHandler) HandlePacketSend(ctx *event.Context, pk packet.Packet, ray *ray.Ray) {
-	_, err := e.VM.Call("packet_send", nil, ctx, pk, ray)
-	if err != nil {
-		panic(err)
-	}
 }

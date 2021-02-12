@@ -109,6 +109,7 @@ func NewSunW(config Config) (*Sun, error) {
 		Servers:         config.Proxy.TransferCommand.Servers,
 		StatusCommand:   config.Proxy.StatusCommand,
 		Logger:          logger.New(config.Proxy.Logger.File, config.Proxy.Logger.Debug),
+		handler:         NopHandler{},
 	}
 	sun.PluginManager = plugin.NewManager(sun.Logger)
 	if config.Proxy.MOTDForward {
@@ -195,7 +196,7 @@ func NewSun() (*Sun, error) {
 }
 
 func (s *Sun) main() {
-	_ = s.PluginManager.VM.Set("Sun", s)
+	_ = s.PluginManager.VM.Set("sun", s)
 	s.PluginManager.LoadPluginDir()
 	defer s.Listener.Close()
 	if s.PListener != nil {
@@ -253,9 +254,6 @@ func (s *Sun) main() {
 			continue
 		}
 		r := ray.New(conn.(*minecraft.Conn))
-		if s.PluginManager.Handler != nil {
-			r.Handle(s.PluginManager.Handler)
-		}
 		rconn, err := s.ConnectToHub(r)
 		if err != nil {
 			_ = s.Logger.Errorf("No Active LoadBalancers or Hub Could accept Ray: %s!",
