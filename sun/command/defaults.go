@@ -14,13 +14,14 @@ type Help struct {
 	Map Map
 }
 
-func (h Help) Execute(logger logger.Logger) {
-	logger.InfoColor(strings.Repeat("~", 10), color.New(color.FgYellow))
+func (h Help) Execute(logger logger.Logger) error {
+	_ = logger.InfoColor(strings.Repeat("~", 10), color.New(color.FgYellow))
 	for _, cmd := range h.Map {
 		info := cmd.Info()
-		logger.Infof("/%s, Description: %s, Usage: %s", info.Name, info.Description, info.Usage)
+		_ = logger.Infof("/%s, Description: %s, Usage: %s", info.Name, info.Description, info.Usage)
 	}
-	logger.InfoColor(strings.Repeat("~", 10), color.New(color.FgYellow))
+	err := logger.InfoColor(strings.Repeat("~", 10), color.New(color.FgYellow))
+	return err
 }
 
 func (h Help) Info() CommandInfo {
