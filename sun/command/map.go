@@ -8,7 +8,6 @@ func NewMap() Map {
 	return make(map[string]Command)
 }
 
-
 /*
 Register adds the given Command to by name to the Map with a option to override if the said command already exists.
 */
@@ -33,7 +32,7 @@ func (m Map) Unregister(name string) {
 Get returns the given command registered to this map by its name.
 ex `m.Get("help")`
 */
-func (m Map) Get(name string) (Command, err) {
+func (m Map) Get(name string) (Command, error) {
 	if cmd, ok := m[name]; ok {
 		return cmd, nil
 	}

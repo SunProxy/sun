@@ -42,6 +42,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
+	"github.com/sunproxy/sun/sun/command"
 	"github.com/sunproxy/sun/sun/event"
 	"github.com/sunproxy/sun/sun/ip_addr"
 	"github.com/sunproxy/sun/sun/logger"
@@ -55,6 +56,7 @@ import (
 	"net"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"sync"
 	"time"
 )
@@ -79,6 +81,7 @@ type Sun struct {
 	PluginManager   *plugin.Manager
 	handler         Handler
 	handlerMu       sync.RWMutex
+	CmdProcessor    command.Processor
 }
 
 type StatusProvider struct {
@@ -111,6 +114,7 @@ func NewSunW(config Config) (*Sun, error) {
 		Logger:          logger.New(config.Proxy.Logger.File, config.Proxy.Logger.Debug),
 		handler:         NopHandler{},
 	}
+	sun.CmdProcessor = command.NewProcessor(sun.Logger, func(cmd command.Command) {})
 	sun.PluginManager = plugin.NewManager(sun.Logger)
 	if config.Proxy.MOTDForward {
 		tmpStatus, err := sun.MotdForward()
@@ -196,6 +200,8 @@ func NewSun() (*Sun, error) {
 }
 
 func (s *Sun) main() {
+	s.CmdProcessor.RegisterDefaults()
+	s.CmdProcessor.StartProcessing(os.Stdin)
 	_ = s.PluginManager.VM.Set("sun", s)
 	s.PluginManager.LoadPluginDir()
 	defer s.Listener.Close()
