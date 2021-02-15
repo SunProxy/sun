@@ -1,25 +1,26 @@
 package command
 
 import (
-	"github.com/sunproxy/sun/sun/logger"
 	"bufio"
-	"io"
+	"github.com/sunproxy/sun/sun/logger"
+	"os"
+	"regexp"
+	"strings"
 )
 
 var CommandRegex = regexp.MustCompile(`(?m)("[^"]+"|[^\s"]+)`)
 
 type Processor struct {
-	Map Map
-	On func(cmd Command)
-	Logger logger.Logger
+	Map     Map
+	On      func(cmd Command)
+	Logger  logger.Logger
 	running bool
 }
 
-
 /*
-StartProcessing starts the command processor reading from the given std in (*io.File in golang terms.) 
+StartProcessing starts the command processor reading from the given std in (*io.File in golang terms.)
 */
-func (p Processor) StartProcessing(in *io.File) {
+func (p Processor) StartProcessing(in *os.File) {
 	p.running = true
 	go func() {
 		scnr := bufio.NewScanner(in)
@@ -27,7 +28,13 @@ func (p Processor) StartProcessing(in *io.File) {
 		for p.running {
 			scnr.Scan()
 			line := scnr.Text()
-
+			args := strings.Split(line, " ")
+			cmd, err := p.Map.Get(args[0])
+			if err != nil {
+				_ = p.Logger.Errorf("Unknown Command %s", args[0])
+				continue
+			}
+			_ = cmd.Execute(p.Logger)
 		}
 		return
 	}()

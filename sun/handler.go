@@ -37,18 +37,21 @@ SOFTWARE.
 package sun
 
 import (
-	"math/rand"
-	"testing"
-	"time"
+	"github.com/sunproxy/sun/sun/event"
+	"github.com/sunproxy/sun/sun/planet"
+	"github.com/sunproxy/sun/sun/ray"
 )
 
-func BenchmarkGenKey(b *testing.B) {
-	Chars := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	for i := 0; i < b.N; i++ {
-		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
-		var key = make([]rune, 25)
-		for ind := range key {
-			key[ind] = rune(Chars[rnd.Intn(len(Chars))])
-		}
-	}
+type Handler interface {
+	HandleRayJoin(ctx *event.Context, ray *ray.Ray)
+	HandlePlanetConnect(ctx *event.Context, planet *planet.Planet)
 }
+
+type NopHandler struct{}
+
+func (n NopHandler) HandleRayJoin(*event.Context, *ray.Ray) {}
+
+func (n NopHandler) HandlePlanetConnect(*event.Context, *planet.Planet) {}
+
+// Compile time check to make sure NopHandler implements Handler.
+var _ Handler = (*NopHandler)(nil)

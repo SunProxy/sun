@@ -42,6 +42,8 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
+	"github.com/sunproxy/sun/sun/command"
+	"github.com/sunproxy/sun/sun/event"
 	"github.com/sunproxy/sun/sun/ip_addr"
 	"github.com/sunproxy/sun/sun/logger"
 	sunpacket "github.com/sunproxy/sun/sun/packet"
@@ -54,6 +56,7 @@ import (
 	"net"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"sync"
 	"time"
 )
@@ -76,6 +79,9 @@ type Sun struct {
 	StatusCommand   bool
 	Logger          logger.Logger
 	PluginManager   *plugin.Manager
+	handler         Handler
+	handlerMu       sync.RWMutex
+	CmdProcessor    command.Processor
 }
 
 type StatusProvider struct {
@@ -106,7 +112,9 @@ func NewSunW(config Config) (*Sun, error) {
 		Servers:         config.Proxy.TransferCommand.Servers,
 		StatusCommand:   config.Proxy.StatusCommand,
 		Logger:          logger.New(config.Proxy.Logger.File, config.Proxy.Logger.Debug),
+		handler:         NopHandler{},
 	}
+	sun.CmdProcessor = command.NewProcessor(sun.Logger, func(cmd command.Command) {})
 	sun.PluginManager = plugin.NewManager(sun.Logger)
 	if config.Proxy.MOTDForward {
 		tmpStatus, err := sun.MotdForward()
@@ -192,7 +200,9 @@ func NewSun() (*Sun, error) {
 }
 
 func (s *Sun) main() {
-	_ = s.PluginManager.VM.Set("Sun", s)
+	s.CmdProcessor.RegisterDefaults()
+	s.CmdProcessor.StartProcessing(os.Stdin)
+	_ = s.PluginManager.VM.Set("sun", s)
 	s.PluginManager.LoadPluginDir()
 	defer s.Listener.Close()
 	if s.PListener != nil {
@@ -250,9 +260,6 @@ func (s *Sun) main() {
 			continue
 		}
 		r := ray.New(conn.(*minecraft.Conn))
-		if s.PluginManager.Handler != nil {
-			r.Handle(s.PluginManager.Handler)
-		}
 		rconn, err := s.ConnectToHub(r)
 		if err != nil {
 			_ = s.Logger.Errorf("No Active LoadBalancers or Hub Could accept Ray: %s!",
@@ -331,14 +338,19 @@ func (s *Sun) MakeRay(ray *ray.Ray) {
 		return
 	}
 	g.Wait()
-	//start translator
-	ray.InitTranslators(ray.Conn().GameData())
-	//Add to player count
-	s.Status.playerc.Inc()
-	//add to player list
-	s.Rays[ray.Conn().IdentityData().Identity] = ray
-	//Start the two listener functions
-	s.handleRay(ray)
+	//Run through the join handler
+	ctx := event.C()
+	ctx.Continue(func() {
+		//start translator
+		ray.InitTranslators(ray.Conn().GameData())
+		//Add to player count
+		s.Status.playerc.Inc()
+		//add to player list
+		s.Rays[ray.Conn().IdentityData().Identity] = ray
+		//Start the two listener functions
+		s.handleRay(ray)
+	})
+	s.Handler().HandleRayJoin(ctx, ray)
 }
 
 /*
@@ -382,4 +394,23 @@ func (s *Sun) AddPlanet(planet *planet.Planet) {
 	planet.Id = id
 	s.Planets[id] = planet
 	s.handlePlanet(planet)
+}
+
+func (s *Sun) Handler() Handler {
+	if s == nil {
+		return NopHandler{}
+	}
+	s.handlerMu.RLock()
+	handler := s.handler
+	s.handlerMu.RUnlock()
+	return handler
+}
+
+func (s *Sun) Handle(handler Handler) {
+	s.handlerMu.Lock()
+	defer s.handlerMu.Unlock()
+	if handler == nil {
+		handler = NopHandler{}
+	}
+	s.handler = handler
 }

@@ -88,7 +88,6 @@ func (r *Ray) Handle(handler Handler) {
 	}
 	r.handlerMu.Lock()
 	defer r.handlerMu.Unlock()
-
 	if handler == nil {
 		handler = NopHandler{}
 	}
