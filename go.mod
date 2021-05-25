@@ -37,7 +37,7 @@ module github.com/sunproxy/sun
 go 1.14
 
 require (
-	github.com/fatih/color v1.10.0
+	github.com/fatih/color v1.12.0
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/go-cmp v0.5.4 // indirect
 	github.com/google/uuid v1.2.0
