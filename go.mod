@@ -40,7 +40,7 @@ require (
 	github.com/fatih/color v1.10.0
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/go-cmp v0.5.4 // indirect
-	github.com/google/uuid v1.2.0
+	github.com/google/uuid v1.3.0
 	github.com/hlts2/round-robin v0.0.0-20200401070650-85eb7643d48c
 	github.com/klauspost/compress v1.11.7 // indirect
 	github.com/kr/text v0.2.0 // indirect
