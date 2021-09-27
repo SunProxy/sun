@@ -44,7 +44,7 @@ require (
 	github.com/hlts2/round-robin v0.0.0-20200401070650-85eb7643d48c
 	github.com/klauspost/compress v1.11.7 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/mattn/go-colorable v0.1.8
+	github.com/mattn/go-colorable v0.1.10
 	github.com/muhammadmuzzammil1998/jsonc v0.0.0-20201229145248-615b0916ca38 // indirect
 	github.com/pelletier/go-toml v1.9.4
 	github.com/robertkrimen/otto v0.0.0-20200922221731-ef014fd054ac
