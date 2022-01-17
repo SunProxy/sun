@@ -48,8 +48,7 @@ require (
 	github.com/muhammadmuzzammil1998/jsonc v0.0.0-20201229145248-615b0916ca38 // indirect
 	github.com/pelletier/go-toml v1.9.4
 	github.com/robertkrimen/otto v0.0.0-20200922221731-ef014fd054ac
-	github.com/sandertv/go-raknet v1.10.0 // indirect
-	github.com/sandertv/gophertunnel v1.14.3
+	github.com/sandertv/gophertunnel v1.18.2
 	github.com/stretchr/testify v1.7.0 // indirect
 	go.uber.org/atomic v1.9.0
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
