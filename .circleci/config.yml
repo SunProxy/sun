@@ -63,7 +63,7 @@ jobs:
       - run:
           name: Get Modules
           command: |
-            ls
+            cd $HOME/go/src/github.com/sun_proxy/sun
             go get -v -t -d ./...;
       - run:
           name: Build Binaries
