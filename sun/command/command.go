@@ -4,10 +4,10 @@ import "github.com/sunproxy/sun/sun/logger"
 
 type Command interface {
 	Execute(logger.Logger) error
-	Info() CommandInfo
+	Info() Info
 }
 
-type CommandInfo struct {
+type Info struct {
 	Name        string
 	Description string
 	Usage       string

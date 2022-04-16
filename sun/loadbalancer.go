@@ -37,25 +37,24 @@ SOFTWARE.
 package sun
 
 import (
+	"fmt"
 	roundrobin "github.com/hlts2/round-robin"
-	"github.com/sunproxy/sun/sun/ip_addr"
 	"github.com/sunproxy/sun/sun/ray"
 	"log"
 	"net/url"
-	"strconv"
 )
 
 type Balancer interface {
-	Balance(ray *ray.Ray) ip_addr.IpAddr
+	Balance(ray *ray.Ray) string
 }
 
 type LoadBalancer struct {
-	Servers  []ip_addr.IpAddr
+	Servers  []string
 	Overflow *OverflowBalancer
 	Enabled  bool
 }
 
-func (l LoadBalancer) Balance(ray *ray.Ray) ip_addr.IpAddr {
+func (l LoadBalancer) Balance(ray *ray.Ray) string {
 	return l.Overflow.Balance(ray)
 }
 
@@ -63,16 +62,15 @@ type OverflowBalancer struct {
 	rr roundrobin.RoundRobin
 }
 
-func (r *OverflowBalancer) Balance(ray *ray.Ray) ip_addr.IpAddr {
+func (r *OverflowBalancer) Balance(ray *ray.Ray) string {
 	ul := r.rr.Next()
-	port, _ := strconv.Atoi(ul.Port())
-	return ip_addr.IpAddr{Address: ul.Hostname(), Port: uint16(port)}
+	return fmt.Sprintf(ul.Host)
 }
 
-func NewOverflowBalancer(servers []ip_addr.IpAddr) *OverflowBalancer {
+func NewOverflowBalancer(servers []string) *OverflowBalancer {
 	urls := make([]*url.URL, 0)
 	for _, server := range servers {
-		urls = append(urls, &url.URL{Host: server.ToString()})
+		urls = append(urls, &url.URL{Host: server})
 	}
 	rr, err := roundrobin.New(urls)
 	if err != nil {

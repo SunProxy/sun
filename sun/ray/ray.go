@@ -40,14 +40,16 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sunproxy/sun/sun/event"
-	"github.com/sunproxy/sun/sun/remote"
 	"sync"
 )
 
 type Ray struct {
-	conn         *minecraft.Conn
-	remote       *remote.Remote
-	bufferConn   *remote.Remote
+	// conn is the connection to the client. e.g conn -> buffer, buffer -> remote
+	conn *minecraft.Conn
+	// remote is the remote server that this ray is targeting. e.g remote -> buffer, buffer -> conn
+	remote *minecraft.Conn
+	// bufferConn is the connection to the actual proxy server. e.g con -> buffer -> remote
+	bufferConn   *minecraft.Conn
 	Translations *TranslatorMappings
 	transferring bool
 	remoteMu     sync.Mutex
@@ -72,16 +74,14 @@ func New(conn *minecraft.Conn) *Ray {
 	}
 }
 
-/*
-Returns the Remote Connection the player has currently.
-*/
-func (r *Ray) Remote() *remote.Remote {
+// Remote /*
+func (r *Ray) Remote() *minecraft.Conn {
 	r.remoteMu.Lock()
 	defer r.remoteMu.Unlock()
 	return r.remote
 }
 
-//Changes the rays handler...
+// Handle Changes the rays handler...
 func (r *Ray) Handle(handler Handler) {
 	if r == nil {
 		return
@@ -94,7 +94,7 @@ func (r *Ray) Handle(handler Handler) {
 	r.handler = handler
 }
 
-//Returns the current handler...
+// Handler Returns the current handler...
 func (r *Ray) Handler() Handler {
 	if r == nil {
 		return NopHandler{}
@@ -105,9 +105,7 @@ func (r *Ray) Handler() Handler {
 	return handler
 }
 
-/*
-Returns a bool representing if a player is Transferring.
-*/
+// Transferring /*
 func (r *Ray) Transferring() bool {
 	return r.transferring
 }
@@ -120,35 +118,33 @@ func (r *Ray) SetTransferring(transferring bool) {
 	r.transferring = transferring
 }
 
-/**
-BufferConn is the connection used to temp out new conns also named temp conn
-*/
-func (r *Ray) BufferConn() *remote.Remote {
+// BufferConn /**
+func (r *Ray) BufferConn() *minecraft.Conn {
 	return r.bufferConn
 }
 
-func (r *Ray) SetBufferConn(rem *remote.Remote) {
+func (r *Ray) SetBufferConn(rem *minecraft.Conn) {
 	r.bufferConn = rem
 }
 
-func (r *Ray) SetRemote(rem *remote.Remote) {
+func (r *Ray) SetRemote(rem *minecraft.Conn) {
 	r.remoteMu.Lock()
 	r.remote = rem
 	r.remoteMu.Unlock()
 }
 
-func (r *Ray) HandleTransferDataSwap(bufferC *remote.Remote) {
+func (r *Ray) HandleTransferDataSwap(bufferC *minecraft.Conn) {
 	r.remoteMu.Lock()
 	r.remote = bufferC
 	r.bufferConn = nil
-	r.updateTranslatorData(r.remote.Conn.GameData())
+	r.updateTranslatorData(r.remote.GameData())
 	r.remoteMu.Unlock()
 }
 
 type Handler interface {
-	//Called when the ray recieves a packet.
+	// HandlePacketReceive Called when the ray recieves a packet.
 	HandlePacketReceive(ctx *event.Context, pk packet.Packet, ray *Ray)
-	//Called right before or when a ray tries to forward a packet.
+	// HandlePacketSend Called right before or when a ray tries to forward a packet.
 	HandlePacketSend(ctx *event.Context, pk packet.Packet, ray *Ray)
 }
 

@@ -4,11 +4,10 @@ import (
 	"bufio"
 	"github.com/sunproxy/sun/sun/logger"
 	"os"
-	"regexp"
 	"strings"
 )
 
-var CommandRegex = regexp.MustCompile(`(?m)("[^"]+"|[^\s"]+)`)
+//var CommandRegex = regexp.MustCompile(`(?m)("[^"]+"|[^\s"]+)`)
 
 type Processor struct {
 	Map     Map

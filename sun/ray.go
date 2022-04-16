@@ -43,10 +43,8 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	"github.com/sunproxy/sun/sun/event"
-	"github.com/sunproxy/sun/sun/ip_addr"
 	sunpacket "github.com/sunproxy/sun/sun/packet"
 	"github.com/sunproxy/sun/sun/ray"
-	"github.com/sunproxy/sun/sun/remote"
 	"log"
 	"runtime"
 	"strings"
@@ -67,50 +65,6 @@ func (s *Sun) handleRay(ray *ray.Ray) {
 				case *packet.CommandRequest:
 					args := strings.Split(pk.CommandLine, " ")
 					switch args[0][1:] {
-					case "transfer":
-						if s.TransferCommand {
-							if len(args) > 1 {
-								server := args[1]
-								if ip, ok := s.Servers[server]; ok {
-									err = ray.Conn().WritePacket(&packet.Text{
-										Message: text.Colourf("<yellow>You Are Being Transferred To Server %s</yellow>",
-											server),
-										TextType: packet.TextTypeRaw})
-									if err != nil {
-										_ = s.Logger.Debugf("Error Stopped Listener "+
-											"Routine: %s", err.Error())
-										return
-									}
-									err := s.TransferRay(ray, ip)
-									if err != nil {
-										_ = ray.Conn().WritePacket(&packet.Text{
-											Message:  text.Colourf("<red>An Occurred During Your Transfer Request!</red>"),
-											TextType: packet.TextTypeRaw})
-										return
-									}
-								} else {
-									err = ray.Conn().WritePacket(&packet.Text{
-										Message: text.Colourf("<red>Server %s Was Not Found In The Config.yml!</red>",
-											server),
-										TextType: packet.TextTypeRaw})
-									if err != nil {
-										_ = s.Logger.Debugf("Error Stopped Listener "+
-											"Routine: %s", err.Error())
-										return
-									}
-									return
-								}
-							}
-							err = ray.Conn().WritePacket(&packet.Text{
-								Message:  text.Colourf("<red>Please Provide a Server To Be Transferred To!</red>"),
-								TextType: packet.TextTypeRaw})
-							if err != nil {
-								_ = s.Logger.Debugf("Error Stopped Listener "+
-									"Routine: %s", err.Error())
-								return
-							}
-							return
-						}
 					case "status":
 						if s.StatusCommand {
 							err = ray.Conn().WritePacket(&packet.Text{
@@ -188,13 +142,13 @@ func (s *Sun) handleRay(ray *ray.Ray) {
 						}
 					}
 				case *packet.PlayerAction:
-					if pk.ActionType == packet.PlayerActionDimensionChangeDone && ray.Transferring() {
+					if pk.ActionType == protocol.PlayerActionDimensionChangeDone && ray.Transferring() {
 						ray.SetTransferring(false)
 
-						old := ray.Remote().Conn
+						old := ray.Remote()
 						bufferC := ray.BufferConn()
 
-						pos := bufferC.Conn.GameData().PlayerPosition
+						pos := bufferC.GameData().PlayerPosition
 						err = ray.Conn().WritePacket(&packet.ChangeDimension{
 							Dimension: packet.DimensionOverworld,
 							Position:  pos,
@@ -208,7 +162,7 @@ func (s *Sun) handleRay(ray *ray.Ray) {
 						return
 					}
 				}
-				err = ray.Remote().Conn.WritePacket(pk)
+				err = ray.Remote().WritePacket(pk)
 				if err != nil {
 					_ = s.Logger.Debugf("Error Stopped Listener "+
 						"Routine: %s", err.Error())
@@ -220,7 +174,7 @@ func (s *Sun) handleRay(ray *ray.Ray) {
 	}()
 	go func() {
 		for {
-			pk, err := ray.Remote().Conn.ReadPacket()
+			pk, err := ray.Remote().ReadPacket()
 			if err != nil {
 				_ = s.Logger.Debugf("Error Stopped Listener "+
 					"Routine: %s", err.Error())
@@ -241,31 +195,7 @@ func (s *Sun) handleRay(ray *ray.Ray) {
 			//We won't allow plugins to override base listeners...
 			switch pk := pk.(type) {
 			case *packet.AvailableCommands:
-				if s.TransferCommand {
-					var servers []string
-					var overloads []protocol.CommandOverload
-					for name := range s.Servers {
-						servers = append(servers, name)
-					}
-					overloads = append(overloads, protocol.CommandOverload{
-						Parameters: []protocol.CommandParameter{
-							{Name: "server",
-								Type: protocol.CommandArgEnum | protocol.CommandArgValid,
-								Enum: protocol.CommandEnum{
-									Type:    "server",
-									Options: servers,
-								},
-							},
-						},
-					})
-					pk.Commands = append(pk.Commands, protocol.Command{
-						Name:        "transfer",
-						Description: "Transfer to another server!",
-						Overloads:   overloads,
-					})
-					_ = ray.Conn().WritePacket(pk)
-					continue
-				} else if s.StatusCommand {
+				if s.StatusCommand {
 					pk.Commands = append(pk.Commands, protocol.Command{
 						Name:        "status",
 						Description: "Provides information on the sun proxies load and player count!",
@@ -273,7 +203,7 @@ func (s *Sun) handleRay(ray *ray.Ray) {
 					_ = ray.Conn().WritePacket(pk)
 				}
 			case *sunpacket.Transfer:
-				err := s.TransferRay(ray, ip_addr.IpAddr{Address: pk.Address, Port: pk.Port})
+				err := s.TransferRay(ray, fmt.Sprintf("%s:%d", pk.Address, pk.Port))
 				if err != nil {
 					log.Printf("An Occurred During A transfer request, Error: %s\n!", err.Error())
 				}
@@ -297,14 +227,12 @@ func (s *Sun) handleRay(ray *ray.Ray) {
 	}()
 }
 
-/*
-Changes a players remote and readies the connection
-*/
-func (s *Sun) TransferRay(ray *ray.Ray, addr ip_addr.IpAddr) error {
+// TransferRay transfers a ray to a new server.
+func (s *Sun) TransferRay(ray *ray.Ray, addr string) error {
 	log.Println("Transfer request received for", ray.Conn().IdentityData().DisplayName)
 	if ray.Transferring() {
-		log.Println("Transfer scrapped because it was already transferring for", ray.Conn().IdentityData().DisplayName)
-		return fmt.Errorf("transfer scrapped because it was already transferring for %s", ray.Conn().IdentityData().DisplayName)
+		log.Printf("Transfer scrapped because a transfer request was already made for %s", ray.Conn().IdentityData().DisplayName)
+		return fmt.Errorf("transfer scrapped because a transfer request was already made for %s", ray.Conn().IdentityData().DisplayName)
 	}
 	ray.SetTransferring(false)
 	//Dial the new server based on the ipaddr
@@ -313,14 +241,14 @@ func (s *Sun) TransferRay(ray *ray.Ray, addr ip_addr.IpAddr) error {
 	idend.XUID = ""
 	conn, err := minecraft.Dialer{
 		ClientData:   ray.Conn().ClientData(),
-		IdentityData: idend}.Dial("raknet", addr.ToString())
+		IdentityData: idend}.Dial("raknet", addr)
 	if err != nil {
 		ray.SetTransferring(false)
 		return err
 	}
-	ray.SetBufferConn(remote.New(conn, addr))
+	ray.SetBufferConn(conn)
 	//do spawn
-	err = ray.BufferConn().Conn.DoSpawnTimeout(time.Minute)
+	err = ray.BufferConn().DoSpawnTimeout(time.Minute)
 	if err != nil {
 		return err
 	}
@@ -343,16 +271,15 @@ func (s *Sun) TransferRay(ray *ray.Ray, addr ip_addr.IpAddr) error {
 		WindowID: protocol.WindowIDInventory,
 		Content:  items,
 	})
-	//Declare the gamemode variable
-	var gamemode int32
-	//The Gamemode should be the original gamemode of the remote player
-	gamemode = ray.BufferConn().Conn.GameData().PlayerGameMode
-	//if the gamemode 5 we use the WorldGameMode as the players
-	if gamemode == 5 {
-		gamemode = ray.BufferConn().Conn.GameData().WorldGameMode
+	var gm int32
+	//The gm should be the original gm of the remote player
+	gm = ray.BufferConn().GameData().PlayerGameMode
+	//if the gm is 5 we use the WorldGameMode as the players
+	if gm == 5 {
+		gm = ray.BufferConn().GameData().WorldGameMode
 	}
 	err = ray.Conn().WritePacket(&packet.SetPlayerGameType{
-		GameType: gamemode,
+		GameType: gm,
 	})
 	if err != nil {
 		return err
@@ -370,8 +297,7 @@ func (s *Sun) TransferRay(ray *ray.Ray, addr ip_addr.IpAddr) error {
 	for x := int32(-1); x <= 1; x++ {
 		for z := int32(-1); z <= 1; z++ {
 			err = ray.Conn().WritePacket(&packet.LevelChunk{
-				ChunkX:        chunkX + x,
-				ChunkZ:        chunkZ + z,
+				Position:      [2]int32{chunkX + x, chunkZ + z},
 				SubChunkCount: 0,
 				RawPayload:    emptychunk,
 			})

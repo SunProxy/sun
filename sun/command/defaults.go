@@ -24,6 +24,6 @@ func (h Help) Execute(logger logger.Logger) error {
 	return err
 }
 
-func (h Help) Info() CommandInfo {
-	return CommandInfo{Name: "help", Description: "Returns help on all commands!", Usage: "help"}
+func (h Help) Info() Info {
+	return Info{Name: "help", Description: "Returns help on all commands!", Usage: "help"}
 }

@@ -44,7 +44,6 @@ import (
 	"github.com/pelletier/go-toml"
 	"github.com/sandertv/gophertunnel/minecraft"
 	"github.com/sandertv/gophertunnel/minecraft/text"
-	"github.com/sunproxy/sun/sun/ip_addr"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"math/rand"
@@ -52,102 +51,61 @@ import (
 	"time"
 )
 
-/**
-The basic Config file struct.
-*/
+// Config is the configuration file for the sun proxy.
 type Config struct {
 	Status minecraft.ServerStatus
 
-	/*
-		The First Server the proxy will redirect players too (after @see LoadBalancer)
-	*/
-	Hub ip_addr.IpAddr
+	// Hub The First Server the proxy will redirect players too (after @see LoadBalancer)
+	Hub string
 
 	Proxy struct {
 
-		/*
-			The port the Sun Proxy should run on.
-		*/
+		// Port The Sun Proxy should run on.
 		Port uint16
 
-		/*
-			A boolean representing wether or not the proxy should use Xbox Auth.
-		*/
+		// XboxAuthentication A boolean representing wether or not the proxy should use Xbox Auth.
 		XboxAuthentication bool
 
-		/*
-			Unused as of now.
-		*/
-		IpForwarding bool
+		// IPForwarding Unused as of now.
+		IPForwarding bool
 
-		TransferCommand struct {
-
-			/*
-				A boolean value representing if sun should enable the transfer command.
-			*/
-			Enabled bool
-
-			/*
-				An array of servers that the transfer command should be using.
-			*/
-			Servers map[string]ip_addr.IpAddr
-		}
-
-		/*
-			Used to redirect players to a new server after the hub is unusable.
-		*/
+		// LoadBalancer Used to redirect players to a new server after the hub is unusable.
 		LoadBalancer struct {
 
-			/*
-				A boolean value representing if sun should use LoadBalancing
-			*/
+			// Enabled A boolean value representing if sun should use LoadBalancing
 			Enabled bool
 
-			/*
-				A list of servers to try to balance too after the hub is unusable.
-			*/
-			Balancers []ip_addr.IpAddr
+			// Balancers A list of servers to try to balance too after the hub is unusable.
+			Balancers []string
 		}
 
-		/*
-			A boolean value representing if the /status command should be overridden.
-		*/
+		// StatusCommand A boolean value representing if the /status command should be overridden.
 		StatusCommand bool
 
-		/*
-			A struct used to indicate if the proxy should enable ppof profiling and what port the webserver should run on.
-		*/
-		Ppof struct {
+		// Pprof An embedded struct used to indicate if the proxy should enable pprof profiling and what port the webserver should run on.
+		Pprof struct {
 
-			/*
-			   A boolean representing whether or not the ppof webserver should be started.
-			*/
+			// Enabled A boolean representing whether the pprof webserver should be started.
 			Enabled bool
 
-			/*
-			   The port at which the ppof webserver should run on.
-			*/
+			// Port The port at which the pprof webserver should run on.
 			Port uint16
 		}
 
 		Logger struct {
 
-			/*
-				The path to the file which the logger entries should be written to
-			*/
+			// File The path to the file which the logger entries should be written to
 			File string
 
-			/*
-				Represents if the logger should display debug messages!
-			*/
+			// Debugs Represents if the logger should display debug messages!
 			Debug bool
 		}
 
-		/*
-			A boolean representing whether or not to forward the motd to the hub or the first open LoadBalancer
-		*/
+		// MOTDFoward A boolean representing whether to forward the motd to the hub or the first open LoadBalancer
 		MOTDForward bool
 	}
+
+	// TODO: REDO ALL THIS SHIT
 
 	/*
 		The configuration for the tcp server in sun
@@ -246,10 +204,8 @@ func defaultConfig(config Config) Config {
 		config.Proxy.Port = 19132
 	}
 
-	emptyIp := ip_addr.IpAddr{}
-	if config.Hub == emptyIp {
-		config.Hub.Port = 19133
-		config.Hub.Address = "0.0.0.0"
+	if config.Hub == "" {
+		config.Hub = "hub-1.mydomain.com:19132"
 	}
 
 	emptyStatus := minecraft.ServerStatus{}
@@ -264,18 +220,13 @@ func defaultConfig(config Config) Config {
 		config.Tcp.Key = GenKey()
 	}
 
-	if config.Proxy.TransferCommand.Servers == nil {
-		config.Proxy.TransferCommand.Servers = make(map[string]ip_addr.IpAddr)
-		config.Proxy.TransferCommand.Servers["example"] = ip_addr.IpAddr{Address: "127.0.0.1", Port: 19134}
-	}
-
 	if config.Proxy.LoadBalancer.Balancers == nil {
-		config.Proxy.LoadBalancer.Balancers = make([]ip_addr.IpAddr, 1)
-		config.Proxy.LoadBalancer.Balancers[0] = ip_addr.IpAddr{Address: "hub-2.mydomain.com", Port: 19132}
+		config.Proxy.LoadBalancer.Balancers = make([]string, 1)
+		config.Proxy.LoadBalancer.Balancers[0] = "hub-2.mydomain.com:19132"
 	}
 
-	if config.Proxy.Ppof.Port == 0 {
-		config.Proxy.Ppof.Port = 8080
+	if config.Proxy.Pprof.Port == 0 {
+		config.Proxy.Pprof.Port = 8080
 	}
 
 	if config.Proxy.Logger.File == "" {

@@ -35,7 +35,7 @@
 language: go
 
 go:
-  - "1.13"
+  - "1.18"
 
 after_success:
   - wget https://raw.githubusercontent.com/DiscordHooks/travis-ci-discord-webhook/master/send.sh

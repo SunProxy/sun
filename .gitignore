@@ -94,5 +94,5 @@ fabric.properties
 
 *.log
 
-plugins/
 resource_packs/
+pprof/

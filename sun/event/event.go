@@ -36,7 +36,7 @@ SOFTWARE.
 
 package event
 
-//Straight taken from dragonfly because I like how he has it set up...
+// Credit to github.com/df-mc/dragonfly for the original code.
 
 // Context represents the context of an event. Handlers of an event may call methods on the context to change
 // the result of the event.

@@ -34,33 +34,33 @@
 
 module github.com/sunproxy/sun
 
-go 1.14
+go 1.18
 
 require (
 	github.com/fatih/color v1.12.0
-	github.com/golang/protobuf v1.4.3 // indirect
-	github.com/google/go-cmp v0.5.4 // indirect
-	github.com/google/uuid v1.3.0
 	github.com/hlts2/round-robin v0.0.0-20200401070650-85eb7643d48c
-	github.com/klauspost/compress v1.11.7 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.8
-	github.com/muhammadmuzzammil1998/jsonc v0.0.0-20201229145248-615b0916ca38 // indirect
 	github.com/pelletier/go-toml v1.9.4
-	github.com/robertkrimen/otto v0.0.0-20200922221731-ef014fd054ac
-	github.com/sandertv/go-raknet v1.10.0 // indirect
-	github.com/sandertv/gophertunnel v1.14.3
-	github.com/stretchr/testify v1.7.0 // indirect
+	github.com/sandertv/gophertunnel v1.19.6
 	go.uber.org/atomic v1.9.0
-	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
-	golang.org/x/image v0.0.0-20201208152932-35266b937fa6 // indirect
-	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
-	golang.org/x/oauth2 v0.0.0-20210201163806-010130855d6c // indirect
-	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c // indirect
-	golang.org/x/text v0.3.5 // indirect
-	google.golang.org/appengine v1.6.7 // indirect
-	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
-	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 	gopkg.in/yaml.v2 v2.4.0
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+)
+
+require (
+	github.com/go-gl/mathgl v1.0.0 // indirect
+	github.com/golang/protobuf v1.4.2 // indirect
+	github.com/google/uuid v1.1.2 // indirect
+	github.com/klauspost/compress v1.11.1 // indirect
+	github.com/mattn/go-isatty v0.0.12 // indirect
+	github.com/muhammadmuzzammil1998/jsonc v0.0.0-20200627155943-e1c384b63054 // indirect
+	github.com/sandertv/go-raknet v1.10.4 // indirect
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
+	golang.org/x/image v0.0.0-20190802002840-cff245a6509b // indirect
+	golang.org/x/net v0.0.0-20200822124328-c89045814202 // indirect
+	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43 // indirect
+	golang.org/x/sys v0.0.0-20200803210538-64077c9b5642 // indirect
+	golang.org/x/text v0.3.3 // indirect
+	google.golang.org/appengine v1.6.6 // indirect
+	google.golang.org/protobuf v1.25.0 // indirect
+	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 )
