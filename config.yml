@@ -2,16 +2,16 @@ status:
   servername: §r§eSun Proxy§r
   playercount: 0
   maxplayers: 50
-hub: hub-1.mydomain.com:19132
+hub: localhost:19133
 proxy:
   port: 19132
-  xboxauthentication: false
+  xboxauthentication: true
   ipforwarding: false
   loadbalancer:
     enabled: false
     balancers:
     - hub-2.mydomain.com:19132
-  statuscommand: false
+  statuscommand: true
   pprof:
     enabled: true
     port: 8080

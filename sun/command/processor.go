@@ -3,6 +3,7 @@ package command
 import (
 	"bufio"
 	"github.com/sunproxy/sun/sun/logger"
+	"go.uber.org/atomic"
 	"os"
 	"strings"
 )
@@ -13,18 +14,18 @@ type Processor struct {
 	Map     Map
 	On      func(cmd Command)
 	Logger  logger.Logger
-	running bool
+	running atomic.Bool
 }
 
 /*
 StartProcessing starts the command processor reading from the given std in (*io.File in golang terms.)
 */
 func (p Processor) StartProcessing(in *os.File) {
-	p.running = true
+	p.running.Store(true)
 	go func() {
 		scnr := bufio.NewScanner(in)
 		// so when ProcStop is called the goroutine isn't sitting dead.
-		for p.running {
+		for p.running.Load() {
 			scnr.Scan()
 			line := scnr.Text()
 			args := strings.Split(line, " ")
@@ -43,7 +44,7 @@ func (p Processor) StartProcessing(in *os.File) {
 StopProcessing stops the command processor from occupying the stdin and will stop all future command execution.
 */
 func (p Processor) StopProcessing() {
-	p.running = false
+	p.running.Store(false)
 }
 
 func NewProcessor(logger logger.Logger, callback func(cmd Command)) Processor {
