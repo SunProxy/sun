@@ -44,11 +44,11 @@ import (
 )
 
 type Ray struct {
-	// conn is the connection to the client. e.g conn -> buffer, buffer -> remote
+	// conn is the connection to the client. e.g conn -> sun, sun -> remote
 	conn *minecraft.Conn
-	// remote is the remote server that this ray is targeting. e.g remote -> buffer, buffer -> conn
+	// remote is the remote server that this ray is targeting. e.g remote -> sun, sun -> conn
 	remote *minecraft.Conn
-	// bufferConn is the connection to the actual proxy server. e.g con -> buffer -> remote
+	// bufferConn is a temporary buffer connection that is used to transfer a connection.
 	bufferConn   *minecraft.Conn
 	Translations *TranslatorMappings
 	transferring bool
